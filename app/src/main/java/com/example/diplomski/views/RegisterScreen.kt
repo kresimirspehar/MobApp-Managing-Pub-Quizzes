@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.example.diplomski.views.registerWithEmailAndPassword
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +27,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf("Client") } // Zadana vrijednost
     val context = LocalContext.current
 
     Box(
@@ -51,7 +53,6 @@ fun RegisterScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Polje za unos email-a
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -59,31 +60,56 @@ fun RegisterScreen(
                 modifier = Modifier
                     .fillMaxWidth(),
                 colors = TextFieldDefaults.textFieldColors(
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color.Gray,
-                    containerColor = Color.Transparent
+                    containerColor = Color.Transparent,
+                    focusedLabelColor = Color.White
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Polje za unos lozinke
             TextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password", color = Color.White) },
-                modifier = Modifier
-                    .fillMaxWidth(),
                 visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.textFieldColors(
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color.Gray,
-                    containerColor = Color.Transparent
+                    containerColor = Color.Transparent,
+                    focusedLabelColor = Color.White
                 )
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // RadioButtonGroup za odabir role
+            Text(
+                text = "Select Role",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = role == "Client",
+                    onClick = { role = "Client" },
+                    colors = RadioButtonDefaults.colors(selectedColor = Color.White)
+                )
+                Text(
+                    text = "Client",
+                    color = Color.White,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                RadioButton(
+                    selected = role == "Admin",
+                    onClick = { role = "Admin" },
+                    colors = RadioButtonDefaults.colors(selectedColor = Color.White)
+                )
+                Text(
+                    text = "Admin",
+                    color = Color.White,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (errorMessage.isNotEmpty()) {
@@ -102,9 +128,8 @@ fun RegisterScreen(
                     } else if (password.length < 6) {
                         errorMessage = "Password must be at least 6 characters"
                     } else {
-                        registerWithEmailAndPassword(context, email, password) {
+                        registerWithEmailAndPassword(context, email, password, role, navController) {
                             errorMessage = ""
-                            onRegisterSuccess()
                         }
                     }
                 },
@@ -137,17 +162,48 @@ fun registerWithEmailAndPassword(
     context: Context,
     email: String,
     password: String,
+    role: String,
+    navController: NavController, // Dodano za navigaciju
     onRegisterSuccess: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Toast.makeText(context, "Registration Successful!", Toast.LENGTH_SHORT).show()
-                onRegisterSuccess()
+                val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+                val user = hashMapOf(
+                    "email" to email,
+                    "role" to role
+                )
+
+                // Dodavanje korisnika u Firestore
+                db.collection("users")
+                    .document(userId)
+                    .set(user)
+                    .addOnSuccessListener {
+                        onRegisterSuccess()
+                        navigateToHome(navController, role)
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Failed to save user: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             } else {
                 Toast.makeText(context, "Registration Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
             }
         }
 }
+
+
+fun navigateToHome(navController: NavController, role: String) {
+    when (role) {
+        "Client" -> navController.navigate("client_home")
+        "Admin" -> navController.navigate("admin_home")
+    }
+}
+
+
+
+
 

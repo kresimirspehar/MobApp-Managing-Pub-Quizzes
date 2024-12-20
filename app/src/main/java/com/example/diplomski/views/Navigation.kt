@@ -10,8 +10,9 @@ fun AppNavigation() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "register") {
-        composable("login") { LoginScreen(navController) { navController.navigate("home") } }
-        composable("register") { RegisterScreen(navController) { navController.navigate("login") } }
-        composable("home") { HomeScreen() }
+        composable("login") { LoginScreen(navController) { } }
+        composable("register") { RegisterScreen(navController) {  } }
+        composable("client_home") { HomeScreen() }
+        composable("admin_home") { AdminHomeScreen()}
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,10 +103,7 @@ fun LoginScreen(
                     if (email.isEmpty() || password.isEmpty()) {
                         errorMessage = "Please fill in all fields"
                     } else {
-                        signInWithEmailAndPassword(context, email, password) {
-                            errorMessage = ""
-                            onLoginSuccess()
-                        }
+                        signInWithEmailAndPassword(context, email, password, navController)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -116,6 +114,7 @@ fun LoginScreen(
             ) {
                 Text("Login")
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tekst i dugme za navigaciju na RegisterScreen
@@ -138,16 +137,34 @@ fun signInWithEmailAndPassword(
     context: Context,
     email: String,
     password: String,
-    onLoginSuccess: () -> Unit
+    navController: NavController // Dodano za navigaciju
 ) {
     val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     auth.signInWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                onLoginSuccess()
+                val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+
+                // Dohvaćanje role iz Firestore-a
+                db.collection("users").document(userId).get()
+                    .addOnSuccessListener { document ->
+                        val role = document.getString("role")
+                        if (role != null) {
+                            navigateToHome(navController, role) // Navigacija prema ulozi
+                        } else {
+                            Toast.makeText(context, "Role not found!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Failed to fetch role: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             } else {
                 Toast.makeText(context, "Login Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
             }
         }
 }
+
+
+
