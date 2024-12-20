@@ -39,12 +39,15 @@ data class Quiz(
     val quizType: String,
     val location: String,
     val fee: Int,
-    val seats: Int
+    val seats: Int,
+    val dateTime: String
 )
 
 fun fetchQuizzes(onQuizzesFetched: (List<Quiz>) -> Unit, onError: (String) -> Unit) {
     val db = FirebaseFirestore.getInstance()
-    db.collection("quizzes").get()
+    db.collection("quizzes")
+        .orderBy("dateTime")
+        .get()
         .addOnSuccessListener { result ->
             val quizzes = result.map { document ->
                 Quiz(
@@ -53,7 +56,8 @@ fun fetchQuizzes(onQuizzesFetched: (List<Quiz>) -> Unit, onError: (String) -> Un
                     quizType = document.getString("quizType") ?: "",
                     location = document.getString("quizType") ?: "",
                     fee = document.getLong("fee")?.toInt() ?: 0,
-                    seats = document.getLong("seats")?.toInt() ?: 0
+                    seats = document.getLong("seats")?.toInt() ?: 0,
+                    dateTime = document.getString("dateTime") ?: ""
                 )
             }
             onQuizzesFetched(quizzes)
@@ -79,7 +83,9 @@ fun AdminHomeScreen(navController: NavController) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Welcome, Admin!", style = MaterialTheme.typography.headlineMedium)
@@ -121,6 +127,7 @@ fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>) {
             Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
             Text(text = "Type: ${quiz.quizType}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Location: ${quiz.location}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Date: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -139,6 +146,7 @@ fun AddQuizScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var fee by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("") }
+    var dateTime by remember { mutableStateOf("") } // Polje za datum i vrijeme
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
 
@@ -183,6 +191,13 @@ fun AddQuizScreen(navController: NavController) {
             label = { Text("Number of Seats") },
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextField(
+            value = dateTime,
+            onValueChange = { dateTime = it },
+            label = { Text("Date and Time (yyyy-MM-dd HH:mm)") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         if (errorMessage.isNotEmpty()) {
@@ -191,7 +206,7 @@ fun AddQuizScreen(navController: NavController) {
 
         Button(
             onClick = {
-                if (quizType.isEmpty() || location.isEmpty() || name.isEmpty() || fee.isEmpty() || seats.isEmpty()) {
+                if (quizType.isEmpty() || location.isEmpty() || name.isEmpty() || fee.isEmpty() || seats.isEmpty() || dateTime.isEmpty()) {
                     errorMessage = "All fields are required!"
                 } else {
                     addQuizToFirestore(
@@ -200,10 +215,11 @@ fun AddQuizScreen(navController: NavController) {
                         name,
                         fee.toIntOrNull() ?: 0,
                         seats.toIntOrNull() ?: 0,
+                        dateTime,
                         context,
                         onSuccess = {
                             Toast.makeText(context, "Quiz added successfully!", Toast.LENGTH_SHORT).show()
-                            navController.popBackStack() // Povratak na AdminHomeScreen
+                            navController.popBackStack()
                         },
                         onFailure = {
                             Toast.makeText(context, "Failed to add quiz: $it", Toast.LENGTH_LONG).show()
@@ -224,6 +240,7 @@ fun addQuizToFirestore(
     name: String,
     fee: Int,
     seats: Int,
+    dateTime: String,
     context: Context,
     onSuccess: () -> Unit,
     onFailure: (String) -> Unit
@@ -234,7 +251,8 @@ fun addQuizToFirestore(
         "location" to location,
         "name" to name,
         "fee" to fee,
-        "seats" to seats
+        "seats" to seats,
+        "dateTime" to dateTime
     )
 
     db.collection("quizzes")
