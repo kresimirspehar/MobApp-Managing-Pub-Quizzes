@@ -43,7 +43,10 @@ data class Quiz(
     val dateTime: String
 )
 
-fun fetchQuizzes(onQuizzesFetched: (List<Quiz>) -> Unit, onError: (String) -> Unit) {
+fun fetchQuizzes(
+    onQuizzesFetched: (List<Quiz>) -> Unit,
+    onError: (String) -> Unit
+) {
     val db = FirebaseFirestore.getInstance()
     db.collection("quizzes")
         .orderBy("dateTime")
