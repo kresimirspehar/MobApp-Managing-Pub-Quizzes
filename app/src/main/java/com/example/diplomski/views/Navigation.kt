@@ -13,6 +13,7 @@ fun AppNavigation() {
         composable("login") { LoginScreen(navController) { } }
         composable("register") { RegisterScreen(navController) {  } }
         composable("client_home") { HomeScreen() }
-        composable("admin_home") { AdminHomeScreen()}
+        composable("admin_home") { AdminHomeScreen(navController)}
+        composable("add_quiz") { AddQuizScreen(navController) }
     }
 }

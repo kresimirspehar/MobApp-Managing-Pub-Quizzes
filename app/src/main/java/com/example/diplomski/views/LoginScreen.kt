@@ -147,14 +147,13 @@ fun signInWithEmailAndPassword(
             if (task.isSuccessful) {
                 val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
 
-                // Dohvaćanje role iz Firestore-a
                 db.collection("users").document(userId).get()
                     .addOnSuccessListener { document ->
                         val role = document.getString("role")
-                        if (role != null) {
-                            navigateToHome(navController, role) // Navigacija prema ulozi
+                        if (!role.isNullOrEmpty()) {
+                            navigateToHome(navController, role)
                         } else {
-                            Toast.makeText(context, "Role not found!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Role not found! Please contact support.", Toast.LENGTH_SHORT).show()
                         }
                     }
                     .addOnFailureListener { e ->
