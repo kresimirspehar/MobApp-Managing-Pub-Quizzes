@@ -176,6 +176,7 @@ fun registerForQuiz(context: android.content.Context, quizId: String) {
     val registration = hashMapOf(
         "userId" to currentUser.uid,
         "quizId" to quizId,
+        "status" to "pending", // Ponovno postavljanje statusa
         "timeStamp" to System.currentTimeMillis()
     )
 

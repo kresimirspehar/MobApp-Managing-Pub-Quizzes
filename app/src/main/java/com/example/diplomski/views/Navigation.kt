@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.diplomski.views.admin.AddQuizScreen
 import com.example.diplomski.views.admin.AdminHomeScreen
 import com.example.diplomski.views.admin.AdminProfileScreen
+import com.example.diplomski.views.admin.QuizRegistrationsScreen
 import com.example.diplomski.views.client.ClientProfileScreen
 import com.example.diplomski.views.client.ClientRegistrationsScreen
 import com.example.diplomski.views.client.HomeScreen
@@ -53,6 +54,10 @@ fun AppNavigation() {
             composable("client_profile") { ClientProfileScreen(navController) }
             composable("admin_profile") { AdminProfileScreen(navController) }
             composable("client_registrations") { ClientRegistrationsScreen() }
+            composable("quiz_registrations/{quizId}") { backStackEntry ->
+                val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
+                QuizRegistrationsScreen(navController, quizId)
+            }
         }
     }
 }

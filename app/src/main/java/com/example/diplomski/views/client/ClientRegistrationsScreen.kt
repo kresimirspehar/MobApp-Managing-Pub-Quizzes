@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
@@ -21,7 +22,8 @@ data class RegisteredQuiz(
     val quizType: String,
     val location: String,
     val dateTime: String,
-    val dateObject: Date
+    val dateObject: Date,
+    val status: String
 )
 
 @Composable
@@ -31,7 +33,7 @@ fun ClientRegistrationsScreen() {
     val currentUser = FirebaseAuth.getInstance().currentUser
 
     LaunchedEffect(Unit) {
-        fetchRegisteredQuizzes(
+        fetchClientRegistrations(
             userId = currentUser?.uid.orEmpty(),
             onQuizzesFetched = { registeredQuizzes.value = it },
             onError = { errorMessage.value = it }
@@ -52,38 +54,54 @@ fun ClientRegistrationsScreen() {
 
         LazyColumn {
             items(registeredQuizzes.value) { quiz ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
-                        Text(text = "Type: ${quiz.quizType}")
-                        Text(text = "Location: ${quiz.location}")
-                        Text(text = "Date: ${quiz.dateTime}")
-                    }
+                ClientQuizCard(quiz)
+            }
+        }
+    }
+}
+
+@Composable
+fun ClientQuizCard(quiz: RegisteredQuiz) {
+    val context = LocalContext.current
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Type: ${quiz.quizType}")
+            Text(text = "Location: ${quiz.location}")
+            Text(text = "Date: ${quiz.dateTime}")
+            Text(text = "Status: ${quiz.status}")
+
+            if (quiz.status == "rejected") {
+                Button(onClick = {
+                    registerForQuiz(context, quiz.id)
+                }) {
+                    Text("Register Again")
                 }
             }
         }
     }
 }
 
-fun fetchRegisteredQuizzes(
+fun fetchClientRegistrations(
     userId: String,
     onQuizzesFetched: (List<RegisteredQuiz>) -> Unit,
     onError: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    val currentDate = Date()
 
     db.collection("registrations")
         .whereEqualTo("userId", userId)
         .get()
         .addOnSuccessListener { registrationDocs ->
-            val registeredQuizIds = registrationDocs.documents.mapNotNull { it.getString("quizId") }
+            val registeredQuizIds = registrationDocs.documents.map { doc ->
+                doc.getString("quizId") to doc.getString("status")
+            }.filterNotNull()
 
             if (registeredQuizIds.isEmpty()) {
                 onQuizzesFetched(emptyList())
@@ -91,34 +109,24 @@ fun fetchRegisteredQuizzes(
             }
 
             db.collection("quizzes")
-                .whereIn(FieldPath.documentId(), registeredQuizIds)
+                .whereIn(FieldPath.documentId(), registeredQuizIds.map { it.first })
                 .get()
                 .addOnSuccessListener { quizDocs ->
                     val quizzes = quizDocs.mapNotNull { document ->
-                        val dateTimeString = document.getString("dateTime") ?: return@mapNotNull null
-                        val dateTime = try {
-                            dateFormat.parse(dateTimeString)
-                        } catch (e: Exception) {
-                            null
-                        }
-                        if (dateTime != null) {
-                            RegisteredQuiz(
-                                id = document.id,
-                                name = document.getString("name").orEmpty(),
-                                quizType = document.getString("quizType").orEmpty(),
-                                location = document.getString("location").orEmpty(),
-                                dateTime = dateTimeString,
-                                dateObject = dateTime
-                            )
-                        } else {
-                            null
-                        }
+                        val quizId = document.id
+                        val status = registeredQuizIds.find { it.first == quizId }?.second.orEmpty()
+                        RegisteredQuiz(
+                            id = quizId,
+                            name = document.getString("name").orEmpty(),
+                            quizType = document.getString("quizType").orEmpty(),
+                            location = document.getString("location").orEmpty(),
+                            dateTime = document.getString("dateTime").orEmpty(),
+                            dateObject = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                .parse(document.getString("dateTime").orEmpty()) ?: Date(),
+                            status = status // Dodan status prijave
+                        )
                     }
-                    // Filtriranje budućih kvizova i sortiranje prema datumu
-                    val sortedQuizzes = quizzes
-                        .filter { it.dateObject.after(currentDate) }
-                        .sortedBy { it.dateObject }
-                    onQuizzesFetched(sortedQuizzes)
+                    onQuizzesFetched(quizzes)
                 }
                 .addOnFailureListener { e -> onError("Error fetching quizzes: ${e.message}") }
         }

@@ -115,14 +115,14 @@ fun AdminHomeScreen(navController: NavController) {
 
         LazyColumn {
             items(quizzes.value) { quiz ->
-                ExpandableCard(quiz, expandedCardIds) // Prikaz kartice
+                ExpandableCard(quiz, expandedCardIds, navController) // Prikaz kartice
             }
         }
     }
 }
 
 @Composable
-fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>) {
+fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>, navController: NavController) {
     val isExpanded = expandedCardIds.value.contains(quiz.id)
 
     Card(
@@ -147,6 +147,17 @@ fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Fee: ${quiz.fee} USD", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Seats: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Dodavanje gumba za pregled prijava
+                Button(
+                    onClick = {
+                        navController.navigate("quiz_registrations/${quiz.id}")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("View Registrations")
+                }
             }
         }
     }
