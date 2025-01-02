@@ -1,4 +1,4 @@
-package com.example.diplomski.views
+package com.example.diplomski.views.admin
 
 import android.content.Context
 import android.widget.Toast
@@ -29,9 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 
 data class Quiz(
     val id: String,
@@ -43,12 +42,22 @@ data class Quiz(
     val dateTime: String
 )
 
+
+
 fun fetchQuizzes(
     onQuizzesFetched: (List<Quiz>) -> Unit,
     onError: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    if (currentUser == null) {
+        onError("User not authenticated")
+        return
+    }
+
     db.collection("quizzes")
+        .whereEqualTo("authorId", currentUser.uid)
         .orderBy("dateTime")
         .get()
         .addOnSuccessListener { result ->
@@ -69,6 +78,8 @@ fun fetchQuizzes(
             onError(e.message ?: "Failed to fetch quizzes")
         }
 }
+
+
 
 @Composable
 fun AdminHomeScreen(navController: NavController) {
@@ -249,13 +260,21 @@ fun addQuizToFirestore(
     onFailure: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    if (currentUser == null) {
+        onFailure("User not authenticated")
+        return
+    }
+
     val quiz = hashMapOf(
         "quizType" to quizType,
         "location" to location,
         "name" to name,
         "fee" to fee,
         "seats" to seats,
-        "dateTime" to dateTime
+        "dateTime" to dateTime,
+        "authorId" to currentUser.uid
     )
 
     db.collection("quizzes")

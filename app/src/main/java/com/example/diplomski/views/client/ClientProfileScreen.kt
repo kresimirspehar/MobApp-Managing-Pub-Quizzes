@@ -1,4 +1,6 @@
-package com.example.diplomski.views
+package com.example.diplomski.views.client
+
+
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,7 +12,7 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun AdminProfileScreen(navController: NavController) {
+fun ClientProfileScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -18,15 +20,23 @@ fun AdminProfileScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Profile Screen", style = MaterialTheme.typography.headlineMedium)
+        Text("Client Profile Screen", style = MaterialTheme.typography.headlineMedium)
+
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            FirebaseAuth.getInstance().signOut()
-            navController.navigate("login") {
-                popUpTo("client_profile") { inclusive = true }
-            }
-        }) {
-            Text("Sign out")
+
+        // Gumb za odjavu
+        Button(
+            onClick = {
+                FirebaseAuth.getInstance().signOut()
+                navController.navigate("login") {
+                    popUpTo("client_home") { inclusive = true }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign Out")
         }
     }
 }
+
+

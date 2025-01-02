@@ -1,8 +1,7 @@
-package com.example.diplomski.views
+package com.example.diplomski.views.client
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.diplomski.views.admin.Quiz
+import com.example.diplomski.views.admin.fetchQuizzes
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun HomeScreen() {
@@ -32,7 +34,7 @@ fun HomeScreen() {
     val errorMessage = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        fetchQuizzes(
+        fetchAllQuizzes(
             onQuizzesFetched = { quizzes.value = it },
             onError = { errorMessage.value = it }
         )
@@ -56,6 +58,34 @@ fun HomeScreen() {
             }
         }
     }
+}
+
+fun fetchAllQuizzes(
+    onQuizzesFetched: (List<Quiz>) -> Unit,
+    onError: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("quizzes")
+        .orderBy("dateTime")
+        .get()
+        .addOnSuccessListener { result ->
+            val quizzes = result.map { document ->
+                Quiz(
+                    id = document.id,
+                    name = document.getString("name") ?: "",
+                    quizType = document.getString("quizType") ?: "",
+                    location = document.getString("location") ?: "",
+                    fee = document.getLong("fee")?.toInt() ?: 0,
+                    seats = document.getLong("seats")?.toInt() ?: 0,
+                    dateTime = document.getString("dateTime") ?: ""
+                )
+            }
+            onQuizzesFetched(quizzes)
+        }
+        .addOnFailureListener { e ->
+            onError(e.message ?: "Failed to fetch quizzes")
+        }
 }
 
 @Composable
