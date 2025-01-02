@@ -1,5 +1,7 @@
 package com.example.diplomski.views
 
+import com.example.diplomski.views.ClientProfileScreen
+import com.example.diplomski.views.AdminProfileScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -43,8 +45,8 @@ fun AppNavigation() {
             composable("client_home") { HomeScreen() }
             composable("admin_home") { AdminHomeScreen(navController) }
             composable("add_quiz") { AddQuizScreen(navController) }
-            composable("client_profile") { ProfileScreen() }
-            composable("admin_profile") { ProfileScreen() }
+            composable("client_profile") { ClientProfileScreen(navController) }
+            composable("admin_profile") { AdminProfileScreen(navController) }
         }
     }
 }
