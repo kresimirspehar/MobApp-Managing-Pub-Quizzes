@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -105,7 +106,7 @@ fun AdminHomeScreen(navController: NavController) {
         Text("Welcome, Admin!", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("add_quiz") }) {
-            Text("Add quiz")
+            Text("Add Quiz")
         }
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -115,14 +116,39 @@ fun AdminHomeScreen(navController: NavController) {
 
         LazyColumn {
             items(quizzes.value) { quiz ->
-                ExpandableCard(quiz, expandedCardIds, navController) // Prikaz kartice
+                ExpandableCard(
+                    quiz,
+                    expandedCardIds,
+                    navController,
+                    onDelete = { quizId ->
+                        deleteQuiz(
+                            quizId,
+                            onSuccess = {
+                                Toast.makeText(context, "Quiz deleted successfully", Toast.LENGTH_SHORT).show()
+                                // Refresh quiz list
+                                fetchQuizzes(
+                                    onQuizzesFetched = { quizzes.value = it },
+                                    onError = { errorMessage.value = it }
+                                )
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>, navController: NavController) {
+fun ExpandableCard(
+    quiz: Quiz,
+    expandedCardIds: MutableState<Set<String>>,
+    navController: NavController,
+    onDelete: (String) -> Unit
+){
     val isExpanded = expandedCardIds.value.contains(quiz.id)
 
     Card(
@@ -157,6 +183,16 @@ fun ExpandableCard(quiz: Quiz, expandedCardIds: MutableState<Set<String>>, navCo
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("View Registrations")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { onDelete(quiz.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete Quiz")
                 }
             }
         }
@@ -297,6 +333,19 @@ fun addQuizToFirestore(
             Toast.makeText(context, "Failed to add quiz: ${e.message}", Toast.LENGTH_LONG).show()
             onFailure(e.message ?: "Unknown error")
         }
+}
+
+fun deleteQuiz(
+    quizId: String,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("quizzes").document(quizId)
+        .delete()
+        .addOnSuccessListener { onSuccess() }
+        .addOnFailureListener { e -> onError(e.message ?: "Failed to delete quiz") }
 }
 
 
