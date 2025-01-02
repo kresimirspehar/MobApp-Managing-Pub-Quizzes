@@ -12,6 +12,7 @@ import com.example.diplomski.views.admin.AddQuizScreen
 import com.example.diplomski.views.admin.AdminHomeScreen
 import com.example.diplomski.views.admin.AdminProfileScreen
 import com.example.diplomski.views.client.ClientProfileScreen
+import com.example.diplomski.views.client.ClientRegistrationsScreen
 import com.example.diplomski.views.client.HomeScreen
 
 @Composable
@@ -21,17 +22,20 @@ fun AppNavigation() {
     val currentDestination = currentBackStack.value?.destination?.route
 
     val showBottomBar = when (currentDestination) {
-        "client_home", "admin_home", "add_quiz", "client_profile", "admin_profile" -> true
+        "client_home", "admin_home", "add_quiz", "client_profile", "admin_profile", "client_registrations" -> true
         else -> false
     }
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                if (currentDestination?.startsWith("client") == true) {
-                    BottomNavigationBar(navController = navController, items = getUserBottomNavItems())
-                } else if (currentDestination?.startsWith("admin") == true) {
-                    BottomNavigationBar(navController = navController, items = getAdminBottomNavItems())
+                when {
+                    currentDestination?.startsWith("client") == true -> {
+                        BottomNavigationBar(navController = navController, items = getUserBottomNavItems())
+                    }
+                    currentDestination?.startsWith("admin") == true -> {
+                        BottomNavigationBar(navController = navController, items = getAdminBottomNavItems())
+                    }
                 }
             }
         }
@@ -48,6 +52,7 @@ fun AppNavigation() {
             composable("add_quiz") { AddQuizScreen(navController) }
             composable("client_profile") { ClientProfileScreen(navController) }
             composable("admin_profile") { AdminProfileScreen(navController) }
+            composable("client_registrations") { ClientRegistrationsScreen() }
         }
     }
 }

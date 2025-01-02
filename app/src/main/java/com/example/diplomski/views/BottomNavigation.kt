@@ -44,7 +44,9 @@ fun BottomNavigationBar(navController: NavController, items: List<BottomNavItem>
 fun getUserBottomNavItems(): List<BottomNavItem> {
     return listOf(
         BottomNavItem("Quizzes", "client_home", R.drawable.baseline_event_24),
+        BottomNavItem("My Quizzes", "client_registrations", R.drawable.baseline_access_time_filled_24),
         BottomNavItem("Profile", "client_profile", R.drawable.baseline_person_24)
+
     )
 }
 
