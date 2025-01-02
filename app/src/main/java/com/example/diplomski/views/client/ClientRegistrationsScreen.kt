@@ -64,6 +64,8 @@ fun ClientRegistrationsScreen() {
 fun ClientQuizCard(quiz: RegisteredQuiz) {
     val context = LocalContext.current
     val currentUser = FirebaseAuth.getInstance().currentUser
+    var buttonEnabled by remember { mutableStateOf(quiz.status == "rejected") } // Aktivno samo za "rejected"
+    val buttonColor = if (quiz.status == "rejected") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 
     Card(
         modifier = Modifier
@@ -78,15 +80,25 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
             Text(text = "Status: ${quiz.status}")
 
             if (quiz.status == "rejected") {
-                Button(onClick = {
-                    registerForQuiz(context, quiz.id)
-                }) {
+                Button(
+                    onClick = {
+                        registerForQuiz(context, quiz.id)
+                        buttonEnabled = false // Onemogućavanje gumba
+                    },
+                    enabled = buttonEnabled,
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Register Again")
                 }
             }
         }
     }
 }
+
+
+
+
 
 fun fetchClientRegistrations(
     userId: String,

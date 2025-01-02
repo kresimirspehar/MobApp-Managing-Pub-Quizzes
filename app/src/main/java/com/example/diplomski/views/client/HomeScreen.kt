@@ -63,10 +63,10 @@ fun HomeScreen() {
     }
 }
 
-fun checkIfRegistered(
+fun checkRegistrationStatus(
     userId: String,
     quizId: String,
-    onResult: (Boolean) -> Unit
+    onResult: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
 
@@ -75,10 +75,15 @@ fun checkIfRegistered(
         .whereEqualTo("quizId", quizId)
         .get()
         .addOnSuccessListener { documents ->
-            onResult(!documents.isEmpty) // Ako dokumenti postoje, korisnik je već prijavljen
+            if (documents.isEmpty) {
+                onResult("not_registered")
+            } else {
+                val status = documents.first().getString("status") ?: "not_registered"
+                onResult(status)
+            }
         }
         .addOnFailureListener {
-            onResult(false) // U slučaju greške, pretpostavimo da nije prijavljen
+            onResult("not_registered") // Pretpostavi da nije registriran u slučaju greške
         }
 }
 
@@ -116,12 +121,12 @@ fun QuizCard(quiz: Quiz) {
     var isExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val currentUser = FirebaseAuth.getInstance().currentUser
-    val isRegistered = remember { mutableStateOf(false) }
+    val registrationStatus = remember { mutableStateOf("not_registered") }
 
     LaunchedEffect(Unit) {
         currentUser?.let {
-            checkIfRegistered(it.uid, quiz.id) { registered ->
-                isRegistered.value = registered
+            checkRegistrationStatus(it.uid, quiz.id) { status ->
+                registrationStatus.value = status
             }
         }
     }
@@ -146,18 +151,21 @@ fun QuizCard(quiz: Quiz) {
                 Text(text = "Seats: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (isRegistered.value) {
-                    Text(
-                        text = "Already Registered",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Green
-                    )
-                } else {
-                    Button(onClick = {
+                Button(
+                    onClick = {
                         registerForQuiz(context, quiz.id)
-                    }) {
-                        Text("Prijavi se")
-                    }
+                        registrationStatus.value = "pending"
+                    },
+                    enabled = registrationStatus.value == "not_registered",
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = when (registrationStatus.value) {
+                            "pending" -> "Pending Approval"
+                            "accepted" -> "Registered"
+                            else -> "Register"
+                        }
+                    )
                 }
             }
         }
@@ -176,7 +184,7 @@ fun registerForQuiz(context: android.content.Context, quizId: String) {
     val registration = hashMapOf(
         "userId" to currentUser.uid,
         "quizId" to quizId,
-        "status" to "pending", // Ponovno postavljanje statusa
+        "status" to "pending", // Prijava u statusu čekanja
         "timeStamp" to System.currentTimeMillis()
     )
 
