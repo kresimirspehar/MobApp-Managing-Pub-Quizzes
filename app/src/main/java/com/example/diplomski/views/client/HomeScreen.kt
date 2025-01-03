@@ -1,5 +1,6 @@
 package com.example.diplomski.views.client
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -172,7 +173,7 @@ fun QuizCard(quiz: Quiz) {
     }
 }
 
-fun registerForQuiz(context: android.content.Context, quizId: String) {
+fun registerForQuiz(context: Context, quizId: String) {
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -181,19 +182,29 @@ fun registerForQuiz(context: android.content.Context, quizId: String) {
         return
     }
 
-    val registration = hashMapOf(
-        "userId" to currentUser.uid,
-        "quizId" to quizId,
-        "status" to "pending", // Prijava u statusu čekanja
-        "timeStamp" to System.currentTimeMillis()
-    )
+    // Dohvati korisničko ime
+    db.collection("users").document(currentUser.uid).get()
+        .addOnSuccessListener { userDocument ->
+            val userName = userDocument.getString("name") ?: "Unknown User"
 
-    db.collection("registrations")
-        .add(registration)
-        .addOnSuccessListener {
-            Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
+            val registration = hashMapOf(
+                "userId" to currentUser.uid,
+                "userName" to userName, // Dodano korisničko ime
+                "quizId" to quizId,
+                "status" to "pending",
+                "timeStamp" to System.currentTimeMillis()
+            )
+
+            db.collection("registrations")
+                .add(registration)
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
+                }
         }
         .addOnFailureListener { e ->
-            Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Failed to fetch user data: ${e.message}", Toast.LENGTH_LONG).show()
         }
 }

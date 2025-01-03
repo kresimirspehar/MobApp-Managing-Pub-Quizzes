@@ -175,7 +175,8 @@ fun registerWithEmailAndPassword(
                 val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
                 val user = hashMapOf(
                     "email" to email,
-                    "role" to role
+                    "role" to role,
+                    "name" to email.substringBefore("@")
                 )
 
                 // Dodavanje korisnika u Firestore
