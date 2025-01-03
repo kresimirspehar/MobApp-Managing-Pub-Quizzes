@@ -15,6 +15,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Help
 
 data class RegisteredQuiz(
     val id: String,
@@ -77,7 +82,12 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
             Text(text = "Type: ${quiz.quizType}")
             Text(text = "Location: ${quiz.location}")
             Text(text = "Date: ${quiz.dateTime}")
-            Text(text = "Status: ${quiz.status}")
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusIndicator(status = quiz.status)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Status: ${quiz.status.capitalize()}")
+            }
 
             if (quiz.status == "rejected") {
                 Button(
@@ -95,7 +105,6 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
         }
     }
 }
-
 
 
 
@@ -144,5 +153,23 @@ fun fetchClientRegistrations(
         }
         .addOnFailureListener { e -> onError("Error fetching registrations: ${e.message}") }
 }
+
+@Composable
+fun StatusIndicator(status: String) {
+    val (color, icon) = when (status) {
+        "accepted" -> Pair(MaterialTheme.colorScheme.primary, Icons.Default.CheckCircle)
+        "rejected" -> Pair(MaterialTheme.colorScheme.error, Icons.Default.Cancel)
+        "pending" -> Pair(MaterialTheme.colorScheme.secondary, Icons.Default.HourglassEmpty)
+        else -> Pair(MaterialTheme.colorScheme.onSurface, Icons.Default.Help)
+    }
+
+    Icon(
+        imageVector = icon,
+        contentDescription = status,
+        tint = color,
+        modifier = Modifier.size(24.dp)
+    )
+}
+
 
 

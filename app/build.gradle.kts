@@ -72,5 +72,6 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:22.1.1")
     implementation("com.google.firebase:firebase-auth:22.0.0")
     implementation("com.google.android.gms:play-services-base:18.2.0")
+    implementation ("androidx.compose.material:material-icons-extended:1.7.6")
 
 }

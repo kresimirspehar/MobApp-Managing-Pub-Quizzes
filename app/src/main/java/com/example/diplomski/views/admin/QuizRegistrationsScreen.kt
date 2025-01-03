@@ -11,6 +11,8 @@ import androidx.navigation.NavController
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
+
+
 data class Registration(
     val id: String,
     val userId: String,
@@ -149,4 +151,7 @@ fun RegistrationCard(
         }
     }
 }
+
+
+
 
