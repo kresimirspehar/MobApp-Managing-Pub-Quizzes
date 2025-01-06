@@ -96,7 +96,10 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
                             context = context,
                             quizId = quiz.id,
                             teamSize = 1,
-                            teamMembers = listOf()
+                            teamMembers = listOf(),
+                            onSuccess = {
+                                buttonEnabled = false
+                            }
                         )
                         buttonEnabled = false // Onemogućavanje gumba
                     },

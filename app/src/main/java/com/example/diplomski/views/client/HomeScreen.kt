@@ -154,13 +154,17 @@ fun QuizCard(quiz: Quiz) {
                 TextField(
                     value = teamSize,
                     onValueChange = {
-                        teamSize = it
                         val size = it.toIntOrNull() ?: 0
-                        // Adjust teamMemberNames size dynamically
-                        teamMemberNames = if (size > teamMemberNames.size) {
-                            teamMemberNames + List(size - teamMemberNames.size) { "" }
+                        if (size in 1..5) {
+                            teamSize = it
+                            // Adjust teamMemberNames size dynamically
+                            teamMemberNames = if (size > teamMemberNames.size) {
+                                teamMemberNames + List(size - teamMemberNames.size) { "" }
+                            } else {
+                                teamMemberNames.take(size)
+                            }
                         } else {
-                            teamMemberNames.take(size)
+                            Toast.makeText(context, "Team size must be between 1 and 5.", Toast.LENGTH_SHORT).show()
                         }
                     },
                     label = { Text("Team Size") },
@@ -185,28 +189,24 @@ fun QuizCard(quiz: Quiz) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        // Validacija unosa
-                        if (teamSize.isBlank() || teamSize.toIntOrNull() == null || teamSize.toInt() <= 0) {
+                        val size = teamSize.toIntOrNull()
+                        if (size == null || size <= 0 || size > 5) {
                             Toast.makeText(
                                 context,
-                                "Please enter a valid team size.",
+                                "Team size must be between 1 and 5.",
                                 Toast.LENGTH_SHORT
                             ).show()
-                        } else if (teamMemberNames.size != teamSize.toInt() || teamMemberNames.any { it.isBlank() }) {
+                        } else if (teamMemberNames.size != size || teamMemberNames.any { it.isBlank() }) {
                             Toast.makeText(
                                 context,
                                 "Please fill in all team member names.",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            // Ako je validacija uspješna, poziv funkcije za registraciju
-                            registerForQuiz(
-                                context,
-                                quiz.id,
-                                teamSize.toIntOrNull() ?: 1,
-                                teamMemberNames
-                            )
-                            registrationStatus.value = "pending"
+                            registerForQuiz(context, quiz.id, size, teamMemberNames) {
+                                registrationStatus.value = "pending"
+                                isExpanded = false
+                            }
                         }
                     },
                     enabled = registrationStatus.value == "not_registered",
@@ -220,13 +220,18 @@ fun QuizCard(quiz: Quiz) {
                         }
                     )
                 }
-            }}}}
+            }
+        }
+    }
+}
+
 
 fun registerForQuiz(
     context: Context,
     quizId: String,
     teamSize: Int,
-    teamMembers: List<String>
+    teamMembers: List<String>,
+    onSuccess: () -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
@@ -235,6 +240,17 @@ fun registerForQuiz(
         Toast.makeText(context, "User not authenticated", Toast.LENGTH_SHORT).show()
         return
     }
+
+    if (teamSize > 5) {
+        Toast.makeText(context, "Team size cannot exceed 5 members.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    if (teamMembers.size != teamSize) {
+        Toast.makeText(context, "Mismatch between team size and team member names provided.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
 
     db.collection("users").document(currentUser.uid).get()
         .addOnSuccessListener { userDocument ->
@@ -254,6 +270,7 @@ fun registerForQuiz(
                 .add(registration)
                 .addOnSuccessListener {
                     Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
+                    onSuccess() // Poziv callback funkcije za minimizaciju
                 }
                 .addOnFailureListener { e ->
                     Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
