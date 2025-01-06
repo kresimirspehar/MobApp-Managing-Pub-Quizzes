@@ -92,7 +92,12 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
             if (quiz.status == "rejected") {
                 Button(
                     onClick = {
-                        registerForQuiz(context, quiz.id)
+                        registerForQuiz(
+                            context = context,
+                            quizId = quiz.id,
+                            teamSize = 1,
+                            teamMembers = listOf()
+                        )
                         buttonEnabled = false // Onemogućavanje gumba
                     },
                     enabled = buttonEnabled,

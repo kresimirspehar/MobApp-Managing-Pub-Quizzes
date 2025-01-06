@@ -17,7 +17,9 @@ data class Registration(
     val id: String,
     val userId: String,
     val userName: String,
-    val status: String
+    val status: String,
+    val teamSize: Int = 0,
+    val teamMembers: List<String> = emptyList()
 )
 
 @Composable
@@ -90,7 +92,9 @@ fun fetchRegistrationsForQuiz(
                         id = document.id,
                         userId = document.getString("userId").orEmpty(),
                         userName = document.getString("userName").orEmpty(),
-                        status = document.getString("status").orEmpty()
+                        status = document.getString("status").orEmpty(),
+                        teamSize = document.getLong("teamSize")?.toInt() ?: 0,
+                        teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                     )
                 }
                 onSuccess(registrations)
@@ -126,13 +130,14 @@ fun RegistrationCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "User: ${registration.userName}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Team Size: ${registration.teamSize}")
+            Text(text = "Team Members: ${registration.teamMembers.joinToString(", ")}")
             Text(text = "Status: ${registration.status}", style = MaterialTheme.typography.bodyMedium)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                // Gumb za prihvaćanje
                 Button(
                     onClick = { onAction("accepted") },
                     enabled = registration.status == "pending",
@@ -140,7 +145,6 @@ fun RegistrationCard(
                 ) {
                     Text("Accept")
                 }
-                // Gumb za odbijanje
                 Button(
                     onClick = { onAction("rejected") },
                     enabled = registration.status == "pending"

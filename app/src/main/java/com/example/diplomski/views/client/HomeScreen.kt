@@ -17,6 +17,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +121,8 @@ fun fetchAllQuizzes(
 fun QuizCard(quiz: Quiz) {
 
     var isExpanded by remember { mutableStateOf(false) }
+    var teamSize by remember { mutableStateOf("") }
+    var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
     val context = LocalContext.current
     val currentUser = FirebaseAuth.getInstance().currentUser
     val registrationStatus = remember { mutableStateOf("not_registered") }
@@ -148,14 +151,63 @@ fun QuizCard(quiz: Quiz) {
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Fee: ${quiz.fee} USD", style = MaterialTheme.typography.bodySmall)
-                Text(text = "Seats: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = teamSize,
+                    onValueChange = {
+                        teamSize = it
+                        val size = it.toIntOrNull() ?: 0
+                        // Adjust teamMemberNames size dynamically
+                        teamMemberNames = if (size > teamMemberNames.size) {
+                            teamMemberNames + List(size - teamMemberNames.size) { "" }
+                        } else {
+                            teamMemberNames.take(size)
+                        }
+                    },
+                    label = { Text("Team Size") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Enter Team Member Names:")
+                teamMemberNames.forEachIndexed { index, name ->
+                    TextField(
+                        value = name,
+                        onValueChange = { newName ->
+                            val updatedNames = teamMemberNames.toMutableList()
+                            updatedNames[index] = newName
+                            teamMemberNames = updatedNames
+                        },
+                        label = { Text("Member ${index + 1}") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        registerForQuiz(context, quiz.id)
-                        registrationStatus.value = "pending"
+                        // Validacija unosa
+                        if (teamSize.isBlank() || teamSize.toIntOrNull() == null || teamSize.toInt() <= 0) {
+                            Toast.makeText(
+                                context,
+                                "Please enter a valid team size.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else if (teamMemberNames.size != teamSize.toInt() || teamMemberNames.any { it.isBlank() }) {
+                            Toast.makeText(
+                                context,
+                                "Please fill in all team member names.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            // Ako je validacija uspješna, poziv funkcije za registraciju
+                            registerForQuiz(
+                                context,
+                                quiz.id,
+                                teamSize.toIntOrNull() ?: 1,
+                                teamMemberNames
+                            )
+                            registrationStatus.value = "pending"
+                        }
                     },
                     enabled = registrationStatus.value == "not_registered",
                     modifier = Modifier.fillMaxWidth()
@@ -168,12 +220,14 @@ fun QuizCard(quiz: Quiz) {
                         }
                     )
                 }
-            }
-        }
-    }
-}
+            }}}}
 
-fun registerForQuiz(context: Context, quizId: String) {
+fun registerForQuiz(
+    context: Context,
+    quizId: String,
+    teamSize: Int,
+    teamMembers: List<String>
+) {
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -182,16 +236,17 @@ fun registerForQuiz(context: Context, quizId: String) {
         return
     }
 
-    // Dohvati korisničko ime
     db.collection("users").document(currentUser.uid).get()
         .addOnSuccessListener { userDocument ->
             val userName = userDocument.getString("name") ?: "Unknown User"
 
             val registration = hashMapOf(
                 "userId" to currentUser.uid,
-                "userName" to userName, // Dodano korisničko ime
+                "userName" to userName,
                 "quizId" to quizId,
                 "status" to "pending",
+                "teamSize" to teamSize,
+                "teamMembers" to teamMembers,
                 "timeStamp" to System.currentTimeMillis()
             )
 
