@@ -2,7 +2,9 @@ package com.example.diplomski.views.admin
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +13,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -32,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlin.math.exp
 
 data class Quiz(
     val id: String,
@@ -67,7 +76,7 @@ fun fetchQuizzes(
                     id = document.id,
                     name = document.getString("name") ?: "",
                     quizType = document.getString("quizType") ?: "",
-                    location = document.getString("quizType") ?: "",
+                    location = document.getString("location") ?: "",
                     fee = document.getLong("fee")?.toInt() ?: 0,
                     seats = document.getLong("seats")?.toInt() ?: 0,
                     dateTime = document.getString("dateTime") ?: ""
@@ -167,7 +176,7 @@ fun ExpandableCard(
             Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
             Text(text = "Type: ${quiz.quizType}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Location: ${quiz.location}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Date: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Date and Time: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -202,14 +211,62 @@ fun ExpandableCard(
 
 @Composable
 fun AddQuizScreen(navController: NavController) {
-    var quizType by remember { mutableStateOf("") }
+    val quizTypes = listOf(
+        "Općeniti kviz", "Sportski kviz", "Glazbeni kviz", "Filmski kviz",
+        "Tehnološki kviz", "Povijesni kviz", "Geografski kviz", "Literarni kviz",
+        "Kviz o pop kulturi", "Tematski kvizov", "Ostalo"
+    )
+    var selectedQuizType by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
     var location by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var fee by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("") }
-    var dateTime by remember { mutableStateOf("") } // Polje za datum i vrijeme
+    val dateTime = remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    val quizzes = remember { mutableStateOf<List<Quiz>>(emptyList()) }
+    val datePickerState = remember { mutableStateOf("") }
+    val timePickerState = remember { mutableStateOf("") }
+    val feeError = remember { mutableStateOf<String?>(null) }
+    val seatsError = remember { mutableStateOf<String?>(null) }
+    val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
     val context = LocalContext.current
+    val calendar = java.util.Calendar.getInstance()
+
+
+    val timePickerDialog = android.app.TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay)
+            calendar.set(java.util.Calendar.MINUTE, minute)
+
+            // Provjeri je li odabrano vrijeme u budućnosti
+            if (calendar.timeInMillis < System.currentTimeMillis()) {
+                Toast.makeText(context, "Date and time must be in the future", Toast.LENGTH_SHORT).show()
+            } else {
+                // Ažuriraj vrijednost dateTime nakon što su datum i vrijeme odabrani
+                dateTime.value = dateFormat.format(calendar.time)
+            }
+        },
+        calendar.get(java.util.Calendar.HOUR_OF_DAY),
+        calendar.get(java.util.Calendar.MINUTE),
+        true // 24-satni format
+    )
+
+    val datePickerDialog = android.app.DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(java.util.Calendar.YEAR, year)
+            calendar.set(java.util.Calendar.MONTH, month)
+            calendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth)
+
+            // Otvori TimePicker nakon odabira datuma
+            timePickerDialog.show()
+        },
+        calendar.get(java.util.Calendar.YEAR),
+        calendar.get(java.util.Calendar.MONTH),
+        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    )
 
     Column(
         modifier = Modifier
@@ -218,47 +275,109 @@ fun AddQuizScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        TextField(
-            value = quizType,
-            onValueChange = { quizType = it },
-            label = { Text("Quiz Type") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Text("Add New Quiz", style = MaterialTheme.typography.headlineMedium)
+
+        // Dropdown za selekciju tipa kviza
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = selectedQuizType,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Quiz Type")},
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Select Quiz Type",
+                        modifier = Modifier.clickable { expanded = true }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                quizTypes.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type) },
+                        onClick = {
+                            selectedQuizType = type
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
+
+        // Polje za lokaciju
+        OutlinedTextField(
             value = location,
             onValueChange = { location = it },
             label = { Text("Location") },
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
+
+        // Ostala polja
+        OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Quiz Name") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
+        OutlinedTextField(
             value = fee,
-            onValueChange = { fee = it },
+            onValueChange = {
+                fee = it
+                feeError.value = if (it.toIntOrNull() == null || it.toInt() < 0) {
+                    "Fee must be a non-negative number"
+                } else {
+                    null
+                }
+            },
             label = { Text("Fee") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = feeError.value != null
         )
+        if (feeError.value != null) {
+            Text(feeError.value!!, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
+        OutlinedTextField(
             value = seats,
-            onValueChange = { seats = it },
+            onValueChange = {
+                seats = it
+                seatsError.value = if (it.toIntOrNull() == null || it.toInt() <= 0) {
+                    "Seats must be a positive number"
+                } else {
+                    null
+                }
+            },
             label = { Text("Number of Seats") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = seatsError.value != null
         )
+        if (seatsError.value != null) {
+            Text(seatsError.value!!, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = dateTime,
-            onValueChange = { dateTime = it },
-            label = { Text("Date and Time (yyyy-MM-dd HH:mm)") },
-            modifier = Modifier.fillMaxWidth()
+        OutlinedTextField(
+            value = dateTime.value,
+            onValueChange = {},
+            label = { Text("Date and Time") },
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    datePickerDialog.show() // Prvo otvori DatePickerDialog
+                }
         )
+
+
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (errorMessage.isNotEmpty()) {
@@ -267,20 +386,23 @@ fun AddQuizScreen(navController: NavController) {
 
         Button(
             onClick = {
-                if (quizType.isEmpty() || location.isEmpty() || name.isEmpty() || fee.isEmpty() || seats.isEmpty() || dateTime.isEmpty()) {
+                if (selectedQuizType.isEmpty() || location.isEmpty() || name.isEmpty() || fee.isEmpty() || seats.isEmpty()
+                    || dateTime.value.isEmpty()) {
                     errorMessage = "All fields are required!"
                 } else {
                     addQuizToFirestore(
-                        quizType,
-                        location,
-                        name,
-                        fee.toIntOrNull() ?: 0,
-                        seats.toIntOrNull() ?: 0,
-                        dateTime,
-                        context,
+                        quizType = selectedQuizType,
+                        location = location,
+                        name = name,
+                        fee = fee.toIntOrNull() ?: 0,
+                        seats = seats.toIntOrNull() ?: 0,
+                        dateTime = dateTime.value,
+                        context = context,
                         onSuccess = {
                             Toast.makeText(context, "Quiz added successfully!", Toast.LENGTH_SHORT).show()
+
                             navController.popBackStack()
+
                         },
                         onFailure = {
                             Toast.makeText(context, "Failed to add quiz: $it", Toast.LENGTH_LONG).show()
