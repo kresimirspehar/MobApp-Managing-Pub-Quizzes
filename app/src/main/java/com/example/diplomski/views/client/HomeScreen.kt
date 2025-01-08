@@ -126,11 +126,16 @@ fun QuizCard(quiz: Quiz) {
     val context = LocalContext.current
     val currentUser = FirebaseAuth.getInstance().currentUser
     val registrationStatus = remember { mutableStateOf("not_registered") }
+    val remainingSeats = remember { mutableStateOf(quiz.seats) }
 
     LaunchedEffect(Unit) {
         currentUser?.let {
             checkRegistrationStatus(it.uid, quiz.id) { status ->
                 registrationStatus.value = status
+            }
+
+            fetchCurrentRegistrations(quiz.id) { currentRegistrations  ->
+                remainingSeats.value = quiz.seats - currentRegistrations
             }
         }
     }
@@ -148,6 +153,14 @@ fun QuizCard(quiz: Quiz) {
             Text(text = "Type: ${quiz.quizType}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Location: ${quiz.location}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Date: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = if (remainingSeats.value > 0)
+                    "Seats Available: ${remainingSeats.value}"
+                else
+                    "No Seats Available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (remainingSeats.value > 0) Color.Green else Color.Red
+            )
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -209,7 +222,7 @@ fun QuizCard(quiz: Quiz) {
                             }
                         }
                     },
-                    enabled = registrationStatus.value == "not_registered",
+                    enabled = registrationStatus.value == "not_registered" && remainingSeats.value > 0,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -252,31 +265,61 @@ fun registerForQuiz(
     }
 
 
-    db.collection("users").document(currentUser.uid).get()
-        .addOnSuccessListener { userDocument ->
-            val userName = userDocument.getString("name") ?: "Unknown User"
+    db.collection("registrations")
+        .whereEqualTo("quizId", quizId)
+        .get()
+        .addOnSuccessListener { documents ->
+            val totalRegistrations = documents.size()
 
-            val registration = hashMapOf(
-                "userId" to currentUser.uid,
-                "userName" to userName,
-                "quizId" to quizId,
-                "status" to "pending",
-                "teamSize" to teamSize,
-                "teamMembers" to teamMembers,
-                "timeStamp" to System.currentTimeMillis()
-            )
+            db.collection("quizzes").document(quizId).get()
+                .addOnSuccessListener { quizDocument ->
+                    val seats = quizDocument.getLong("seats")?.toInt() ?: 0
 
-            db.collection("registrations")
-                .add(registration)
-                .addOnSuccessListener {
-                    Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
-                    onSuccess() // Poziv callback funkcije za minimizaciju
+                    if (totalRegistrations >= seats) {
+                        Toast.makeText(context, "This quiz is full.", Toast.LENGTH_SHORT).show()
+                    } else {
+
+                        val userName = currentUser.displayName ?: "Unknown User"
+
+                        val registration = hashMapOf(
+                            "userId" to currentUser.uid,
+                            "userName" to userName,
+                            "quizId" to quizId,
+                            "status" to "pending",
+                            "teamSize" to teamSize,
+                            "teamMembers" to teamMembers,
+                            "timeStamp" to System.currentTimeMillis()
+                        )
+
+                        db.collection("registrations")
+                            .add(registration)
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
+                                onSuccess()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                    }
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Failed to fetch quiz data: ${e.message}", Toast.LENGTH_LONG).show()
                 }
         }
         .addOnFailureListener { e ->
-            Toast.makeText(context, "Failed to fetch user data: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Failed to fetch registrations: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+}
+
+fun fetchCurrentRegistrations(quizId: String, onResult: (Int) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("registrations")
+        .whereEqualTo("quizId", quizId)
+        .get()
+        .addOnSuccessListener { documents ->
+            onResult(documents.size())
+        }
+        .addOnFailureListener {
+            onResult(0)
         }
 }
