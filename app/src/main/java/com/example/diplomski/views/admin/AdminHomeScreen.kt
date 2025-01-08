@@ -197,12 +197,25 @@ fun ExpandableCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
+                    onClick = {
+                        navController.navigate("edit_quiz/${quiz.id}")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Edit Quiz")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
                     onClick = { onDelete(quiz.id) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Delete Quiz")
                 }
+
+
             }
         }
     }
@@ -222,17 +235,17 @@ fun AddQuizScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var fee by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("") }
-    val dateTime = remember { mutableStateOf("") }
+    var dateTime = remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     val quizzes = remember { mutableStateOf<List<Quiz>>(emptyList()) }
     val datePickerState = remember { mutableStateOf("") }
     val timePickerState = remember { mutableStateOf("") }
     val feeError = remember { mutableStateOf<String?>(null) }
     val seatsError = remember { mutableStateOf<String?>(null) }
-    val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
     val context = LocalContext.current
-    val calendar = java.util.Calendar.getInstance()
 
+    val calendar = java.util.Calendar.getInstance()
+    val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
 
     val timePickerDialog = android.app.TimePickerDialog(
         context,
@@ -240,17 +253,16 @@ fun AddQuizScreen(navController: NavController) {
             calendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay)
             calendar.set(java.util.Calendar.MINUTE, minute)
 
-            // Provjeri je li odabrano vrijeme u budućnosti
-            if (calendar.timeInMillis < System.currentTimeMillis()) {
-                Toast.makeText(context, "Date and time must be in the future", Toast.LENGTH_SHORT).show()
+            // Provjera je li vrijeme u budućnosti
+            if (calendar.timeInMillis <= System.currentTimeMillis()) {
+                Toast.makeText(context, "Date and time must be in the future.", Toast.LENGTH_SHORT).show()
             } else {
-                // Ažuriraj vrijednost dateTime nakon što su datum i vrijeme odabrani
                 dateTime.value = dateFormat.format(calendar.time)
             }
         },
         calendar.get(java.util.Calendar.HOUR_OF_DAY),
         calendar.get(java.util.Calendar.MINUTE),
-        true // 24-satni format
+        true
     )
 
     val datePickerDialog = android.app.DatePickerDialog(
@@ -259,14 +271,15 @@ fun AddQuizScreen(navController: NavController) {
             calendar.set(java.util.Calendar.YEAR, year)
             calendar.set(java.util.Calendar.MONTH, month)
             calendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth)
-
-            // Otvori TimePicker nakon odabira datuma
-            timePickerDialog.show()
+            timePickerDialog.show() // Otvori TimePicker nakon odabira datuma
         },
         calendar.get(java.util.Calendar.YEAR),
         calendar.get(java.util.Calendar.MONTH),
         calendar.get(java.util.Calendar.DAY_OF_MONTH)
-    )
+    ).apply {
+        // Ograničenje na buduće datume
+        datePicker.minDate = System.currentTimeMillis()
+    }
 
     Column(
         modifier = Modifier
@@ -364,6 +377,7 @@ fun AddQuizScreen(navController: NavController) {
             Text(seatsError.value!!, color = Color.Red, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.height(8.dp))
+
         OutlinedTextField(
             value = dateTime.value,
             onValueChange = {},

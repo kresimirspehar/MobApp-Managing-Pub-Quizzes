@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.diplomski.views.admin.AddQuizScreen
 import com.example.diplomski.views.admin.AdminHomeScreen
 import com.example.diplomski.views.admin.AdminProfileScreen
+import com.example.diplomski.views.admin.EditQuizScreen
 import com.example.diplomski.views.admin.QuizRegistrationsScreen
 import com.example.diplomski.views.client.ClientProfileScreen
 import com.example.diplomski.views.client.ClientRegistrationsScreen
@@ -57,6 +58,10 @@ fun AppNavigation() {
             composable("quiz_registrations/{quizId}") { backStackEntry ->
                 val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
                 QuizRegistrationsScreen(navController, quizId)
+            }
+            composable("edit_quiz/{quizId}") { backStackEntry ->
+                val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
+                EditQuizScreen(navController, quizId)
             }
         }
     }
