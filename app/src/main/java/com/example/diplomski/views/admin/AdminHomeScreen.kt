@@ -98,6 +98,10 @@ fun AdminHomeScreen(navController: NavController) {
     val errorMessage = remember { mutableStateOf("") }
     val expandedCardIds = remember { mutableStateOf(setOf<String>()) }
 
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val userEmail = currentUser?.email ?: "Unknown User"
+    val userName = userEmail.substringBefore("@")
+
     // Dohvaćanje kvizova
     LaunchedEffect(Unit) {
         fetchQuizzes(
@@ -112,7 +116,7 @@ fun AdminHomeScreen(navController: NavController) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Welcome, Admin!", style = MaterialTheme.typography.headlineMedium)
+        Text("Manage Your Quizzes, $userName!", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("add_quiz") }) {
             Text("Add Quiz")
