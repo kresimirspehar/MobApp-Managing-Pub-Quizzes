@@ -20,7 +20,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
         setContent {
-            AppNavigation()
+            DiplomskiTheme {
+                AppNavigation()
+            }
         }
     }
 }
