@@ -8,6 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
@@ -87,17 +90,65 @@ fun fetchRegistrationsForQuiz(
             }
 
             if (snapshot != null) {
-                val registrations = snapshot.documents.map { document ->
-                    Registration(
-                        id = document.id,
-                        userId = document.getString("userId").orEmpty(),
-                        userName = document.getString("userName").orEmpty(),
-                        status = document.getString("status").orEmpty(),
-                        teamSize = document.getLong("teamSize")?.toInt() ?: 0,
-                        teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
-                    )
+                val registrations = mutableListOf<Registration>()
+
+                // Koristimo batch operacije za paralelno dohvaćanje korisničkih imena
+                val userFetchTasks = mutableListOf<Task<DocumentSnapshot>>()
+
+                snapshot.documents.forEach { document ->
+                    val userId = document.getString("userId").orEmpty()
+                    val userName = document.getString("userName").orEmpty()
+
+                    if (userName.isNotEmpty()) {
+                        // Ako userName postoji, dodaj ga odmah
+                        registrations.add(
+                            Registration(
+                                id = document.id,
+                                userId = userId,
+                                userName = userName,
+                                status = document.getString("status").orEmpty(),
+                                teamSize = document.getLong("teamSize")?.toInt() ?: 0,
+                                teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                            )
+                        )
+                    } else {
+                        // Ako userName ne postoji, dohvatimo ga iz "users" kolekcije
+                        val userFetchTask = db.collection("users").document(userId).get()
+                        userFetchTasks.add(userFetchTask)
+                        userFetchTask.addOnSuccessListener { userDoc ->
+                            val fetchedUserName = userDoc.getString("name").orEmpty()
+                            registrations.add(
+                                Registration(
+                                    id = document.id,
+                                    userId = userId,
+                                    userName = fetchedUserName,
+                                    status = document.getString("status").orEmpty(),
+                                    teamSize = document.getLong("teamSize")?.toInt() ?: 0,
+                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                                )
+                            )
+                        }.addOnFailureListener {
+                            // Ako dohvat korisničkog imena ne uspije, koristimo default vrijednost
+                            registrations.add(
+                                Registration(
+                                    id = document.id,
+                                    userId = userId,
+                                    userName = "Unknown User",
+                                    status = document.getString("status").orEmpty(),
+                                    teamSize = document.getLong("teamSize")?.toInt() ?: 0,
+                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                                )
+                            )
+                        }
+                    }
                 }
-                onSuccess(registrations)
+
+                // Čekaj da svi dohvatni zadaci završe prije povrata rezultata
+                Tasks.whenAllComplete(userFetchTasks).addOnCompleteListener {
+                    onSuccess(registrations)
+                }.addOnFailureListener { exception ->
+                    onError("Failed to fetch user details: ${exception.message}")
+                }
             }
         }
 }

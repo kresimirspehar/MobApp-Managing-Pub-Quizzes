@@ -265,49 +265,59 @@ fun registerForQuiz(
     }
 
 
-    db.collection("registrations")
-        .whereEqualTo("quizId", quizId)
-        .get()
-        .addOnSuccessListener { documents ->
-            val totalRegistrations = documents.size()
+    db.collection("users").document(currentUser.uid).get()
+        .addOnSuccessListener { userDoc ->
+            val userName = userDoc.getString("name").orEmpty()
 
-            db.collection("quizzes").document(quizId).get()
-                .addOnSuccessListener { quizDocument ->
-                    val seats = quizDocument.getLong("seats")?.toInt() ?: 0
+            if (userName.isEmpty()) {
+                Toast.makeText(context, "User name not found. Please contact support.", Toast.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
 
-                    if (totalRegistrations >= seats) {
-                        Toast.makeText(context, "This quiz is full.", Toast.LENGTH_SHORT).show()
-                    } else {
+            db.collection("registrations")
+                .whereEqualTo("quizId", quizId)
+                .get()
+                .addOnSuccessListener { documents ->
+                    val totalRegistrations = documents.size()
 
-                        val userName = currentUser.displayName ?: "Unknown User"
+                    db.collection("quizzes").document(quizId).get()
+                        .addOnSuccessListener { quizDocument ->
+                            val seats = quizDocument.getLong("seats")?.toInt() ?: 0
 
-                        val registration = hashMapOf(
-                            "userId" to currentUser.uid,
-                            "userName" to userName,
-                            "quizId" to quizId,
-                            "status" to "pending",
-                            "teamSize" to teamSize,
-                            "teamMembers" to teamMembers,
-                            "timeStamp" to System.currentTimeMillis()
-                        )
+                            if (totalRegistrations >= seats) {
+                                Toast.makeText(context, "This quiz is full.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val registration = hashMapOf(
+                                    "userId" to currentUser.uid,
+                                    "userName" to userName,
+                                    "quizId" to quizId,
+                                    "status" to "pending",
+                                    "teamSize" to teamSize,
+                                    "teamMembers" to teamMembers,
+                                    "timeStamp" to System.currentTimeMillis()
+                                )
 
-                        db.collection("registrations")
-                            .add(registration)
-                            .addOnSuccessListener {
-                                Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
-                                onSuccess()
+                                db.collection("registrations")
+                                    .add(registration)
+                                    .addOnSuccessListener {
+                                        Toast.makeText(context, "Successfully registered for the quiz!", Toast.LENGTH_SHORT).show()
+                                        onSuccess()
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
                             }
-                            .addOnFailureListener { e ->
-                                Toast.makeText(context, "Failed to register: ${e.message}", Toast.LENGTH_LONG).show()
-                            }
-                    }
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(context, "Failed to fetch quiz data: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(context, "Failed to fetch quiz data: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Failed to fetch registrations: ${e.message}", Toast.LENGTH_LONG).show()
                 }
         }
         .addOnFailureListener { e ->
-            Toast.makeText(context, "Failed to fetch registrations: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Failed to fetch user details: ${e.message}", Toast.LENGTH_LONG).show()
         }
 }
 
