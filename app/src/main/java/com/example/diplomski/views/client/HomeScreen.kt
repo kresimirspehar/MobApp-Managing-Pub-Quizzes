@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,14 +13,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,12 +43,27 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun HomeScreen() {
+
+    val selectedLocation = remember { mutableStateOf("") }
+    val selectedQuizType = remember { mutableStateOf("") }
+
+    val allLocations = remember { mutableStateOf<List<String>>(emptyList()) }
+    val allQuizTypes = remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val filteredQuizzes = remember { mutableStateOf<List<Quiz>>(emptyList()) }
+
     val quizzes = remember { mutableStateOf<List<Quiz>>(emptyList()) }
     val errorMessage = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         fetchAllQuizzes(
-            onQuizzesFetched = { quizzes.value = it },
+            onQuizzesFetched = { quizList ->
+                quizzes.value = quizList
+                filteredQuizzes.value = quizList
+
+                allLocations.value = quizList.map { it.location }.distinct()
+                allQuizTypes.value = quizList.map { it.quizType }.distinct()
+            },
             onError = { errorMessage.value = it }
         )
     }
@@ -53,12 +76,32 @@ fun HomeScreen() {
     ) {
         Text("Available Quizzes", style = MaterialTheme.typography.headlineMedium)
 
-        if (errorMessage.value.isNotEmpty()) {
-            Text(errorMessage.value, color = Color.Red)
-        }
+        FilterDropdown(
+            label = "Location",
+            options = allLocations.value,
+            selectedOption = selectedLocation.value,
+            onOptionSelected = {
+                selectedLocation.value = it
+                applyFilters(quizzes.value, selectedLocation.value, selectedQuizType.value, filteredQuizzes)
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        FilterDropdown(
+            label = "Quiz Type",
+            options = allQuizTypes.value,
+            selectedOption = selectedQuizType.value,
+            onOptionSelected = {
+                selectedQuizType.value = it
+                applyFilters(quizzes.value, selectedLocation.value, selectedQuizType.value, filteredQuizzes)
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn {
-            items(quizzes.value) { quiz ->
+            items(filteredQuizzes.value) { quiz ->
                 QuizCard(quiz)
             }
         }
@@ -195,7 +238,9 @@ fun QuizCard(quiz: Quiz) {
                             teamMemberNames = updatedNames
                         },
                         label = { Text("Member ${index + 1}") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
                     )
                 }
 
@@ -333,3 +378,67 @@ fun fetchCurrentRegistrations(quizId: String, onResult: (Int) -> Unit) {
             onResult(0)
         }
 }
+
+@Composable
+fun FilterDropdown(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Expand filter options",
+                    modifier = Modifier.clickable { expanded = true }
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+
+            // Reset opcija (prikaz svih)
+            DropdownMenuItem(
+                text = { Text("All") },
+                onClick = {
+                    onOptionSelected("")
+                    expanded = false
+                }
+            )
+        }
+    }
+}
+
+fun applyFilters(
+    quizzes: List<Quiz>,
+    locationFilter: String,
+    quizTypeFilter: String,
+    filteredQuizzes: MutableState<List<Quiz>>
+) {
+    filteredQuizzes.value = quizzes.filter { quiz ->
+        (locationFilter.isEmpty() || quiz.location == locationFilter) &&
+                (quizTypeFilter.isEmpty() || quiz.quizType == quizTypeFilter)
+    }
+}
+
