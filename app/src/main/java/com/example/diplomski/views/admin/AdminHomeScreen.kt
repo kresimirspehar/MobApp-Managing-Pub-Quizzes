@@ -185,7 +185,7 @@ fun ExpandableCard(
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Fee: ${quiz.fee} USD", style = MaterialTheme.typography.bodySmall)
-                Text(text = "Seats: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Teams: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Dodavanje gumba za pregled prijava
@@ -241,9 +241,6 @@ fun AddQuizScreen(navController: NavController) {
     var seats by remember { mutableStateOf("") }
     var dateTime = remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
-    val quizzes = remember { mutableStateOf<List<Quiz>>(emptyList()) }
-    val datePickerState = remember { mutableStateOf("") }
-    val timePickerState = remember { mutableStateOf("") }
     val feeError = remember { mutableStateOf<String?>(null) }
     val seatsError = remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -368,12 +365,12 @@ fun AddQuizScreen(navController: NavController) {
             onValueChange = {
                 seats = it
                 seatsError.value = if (it.toIntOrNull() == null || it.toInt() <= 0) {
-                    "Seats must be a positive number"
+                    "Teams must be a positive number"
                 } else {
                     null
                 }
             },
-            label = { Text("Number of Seats") },
+            label = { Text("Number of Teams") },
             modifier = Modifier.fillMaxWidth(),
             isError = seatsError.value != null
         )

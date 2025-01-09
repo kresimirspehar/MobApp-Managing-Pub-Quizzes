@@ -147,7 +147,7 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
         OutlinedTextField(
             value = seats,
             onValueChange = { seats = it },
-            label = { Text("Seats") },
+            label = { Text("Teams") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -188,7 +188,7 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
                     seatsValue == null || seatsValue <= 0 -> {
                         Toast.makeText(
                             context,
-                            "Seats must be a positive number.",
+                            "Teams must be a positive number.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }

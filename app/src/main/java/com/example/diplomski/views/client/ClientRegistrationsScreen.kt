@@ -68,7 +68,6 @@ fun ClientRegistrationsScreen() {
 @Composable
 fun ClientQuizCard(quiz: RegisteredQuiz) {
     val context = LocalContext.current
-    val currentUser = FirebaseAuth.getInstance().currentUser
     var buttonEnabled by remember { mutableStateOf(quiz.status == "rejected") } // Aktivno samo za "rejected"
     val buttonColor = if (quiz.status == "rejected") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 

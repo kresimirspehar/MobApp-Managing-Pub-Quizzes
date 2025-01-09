@@ -198,9 +198,9 @@ fun QuizCard(quiz: Quiz) {
             Text(text = "Date: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = if (remainingSeats.value > 0)
-                    "Seats Available: ${remainingSeats.value}"
+                    "Application available: ${remainingSeats.value}"
                 else
-                    "No Seats Available",
+                    "All places filled",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (remainingSeats.value > 0) Color.Green else Color.Red
             )
