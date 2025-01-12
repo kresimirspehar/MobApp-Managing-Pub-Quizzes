@@ -309,7 +309,6 @@ fun registerForQuiz(
         return
     }
 
-
     db.collection("users").document(currentUser.uid).get()
         .addOnSuccessListener { userDoc ->
             val userName = userDoc.getString("name").orEmpty()
@@ -321,6 +320,7 @@ fun registerForQuiz(
 
             db.collection("registrations")
                 .whereEqualTo("quizId", quizId)
+                .whereEqualTo("status", "accepted") // Filtriraj samo prihvaćene prijave
                 .get()
                 .addOnSuccessListener { documents ->
                     val totalRegistrations = documents.size()
@@ -370,6 +370,7 @@ fun fetchCurrentRegistrations(quizId: String, onResult: (Int) -> Unit) {
     val db = FirebaseFirestore.getInstance()
     db.collection("registrations")
         .whereEqualTo("quizId", quizId)
+        .whereEqualTo("status", "accepted")
         .get()
         .addOnSuccessListener { documents ->
             onResult(documents.size())

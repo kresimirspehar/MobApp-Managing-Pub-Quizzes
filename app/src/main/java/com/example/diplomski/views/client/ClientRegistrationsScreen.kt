@@ -1,5 +1,6 @@
 package com.example.diplomski.views.client
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -68,8 +69,31 @@ fun ClientRegistrationsScreen() {
 @Composable
 fun ClientQuizCard(quiz: RegisteredQuiz) {
     val context = LocalContext.current
-    var buttonEnabled by remember { mutableStateOf(quiz.status == "rejected") } // Aktivno samo za "rejected"
-    val buttonColor = if (quiz.status == "rejected") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    val db = FirebaseFirestore.getInstance()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    var registrationStatus by remember { mutableStateOf(quiz.status) } // Koristimo početni status, ali ga osvežavamo
+    val buttonEnabled = registrationStatus == "rejected" // Dugme je aktivno samo ako je status "rejected"
+    val buttonColor = if (buttonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+
+    var teamSize by remember { mutableStateOf("") }
+    var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
+
+    // Povuci status prijave iz Firestore baze svaki put kada se ekran prikaže
+    LaunchedEffect(quiz.id) {
+        currentUser?.let {
+            db.collection("registrations")
+                .whereEqualTo("quizId", quiz.id)
+                .whereEqualTo("userId", it.uid)
+                .get()
+                .addOnSuccessListener { documents ->
+                    registrationStatus = documents.firstOrNull()?.getString("status") ?: "unknown"
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Failed to fetch registration status.", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -83,35 +107,75 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
             Text(text = "Date: ${quiz.dateTime}")
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusIndicator(status = quiz.status)
+                StatusIndicator(status = registrationStatus)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Status: ${quiz.status.capitalize()}")
+                Text(text = "Status: ${registrationStatus.capitalize()}")
             }
 
-            if (quiz.status == "rejected") {
+            if (registrationStatus == "rejected") {
+                // Unos veličine tima
+                OutlinedTextField(
+                    value = teamSize,
+                    onValueChange = { size ->
+                        teamSize = size
+                        val sizeInt = size.toIntOrNull() ?: 0
+                        if (sizeInt in 1..5) {
+                            teamMemberNames = List(sizeInt) { "" }
+                        }
+                    },
+                    label = { Text("Team Size (1-5)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Unos članova tima
+                teamMemberNames.forEachIndexed { index, name ->
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { newName ->
+                            val updatedNames = teamMemberNames.toMutableList()
+                            updatedNames[index] = newName
+                            teamMemberNames = updatedNames
+                        },
+                        label = { Text("Member ${index + 1}") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
                 Button(
                     onClick = {
-                        registerForQuiz(
-                            context = context,
-                            quizId = quiz.id,
-                            teamSize = 1,
-                            teamMembers = listOf(),
-                            onSuccess = {
-                                buttonEnabled = false
-                            }
-                        )
-                        buttonEnabled = false // Onemogućavanje gumba
+                        if (teamSize.isNotEmpty() && teamMemberNames.size == teamSize.toInt() && teamMemberNames.all { it.isNotBlank() }) {
+                            registerForQuiz(
+                                context = context,
+                                quizId = quiz.id,
+                                teamSize = teamSize.toInt(),
+                                teamMembers = teamMemberNames,
+                                onSuccess = {
+                                    registrationStatus = "pending" // Ažuriraj status na "pending" lokalno
+                                }
+                            )
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Please ensure team size and member names are properly filled.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     },
-                    enabled = buttonEnabled,
+                    enabled = buttonEnabled, // Dugme je aktivno samo ako je status "rejected"
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Register Again")
+                    Text(if (registrationStatus == "rejected") "Register Again" else "Pending Approval")
                 }
             }
         }
     }
 }
+
+
 
 
 
