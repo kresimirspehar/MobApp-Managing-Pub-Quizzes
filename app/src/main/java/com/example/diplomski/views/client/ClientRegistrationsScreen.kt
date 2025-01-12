@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Help
+import com.google.firebase.firestore.Query
 
 data class RegisteredQuiz(
     val id: String,
@@ -72,19 +73,20 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    var registrationStatus by remember { mutableStateOf(quiz.status) } // Koristimo početni status, ali ga osvežavamo
-    val buttonEnabled = registrationStatus == "rejected" // Dugme je aktivno samo ako je status "rejected"
+    var registrationStatus by remember { mutableStateOf(quiz.status) } // Osvežava se na osnovu baze
+    val buttonEnabled = registrationStatus == "rejected"
     val buttonColor = if (buttonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
     var teamSize by remember { mutableStateOf("") }
     var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
 
-    // Povuci status prijave iz Firestore baze svaki put kada se ekran prikaže
+    // Osveži status prijave svaki put kada se ekran prikaže
     LaunchedEffect(quiz.id) {
         currentUser?.let {
             db.collection("registrations")
-                .whereEqualTo("quizId", quiz.id)
                 .whereEqualTo("userId", it.uid)
+                .orderBy("timeStamp", Query.Direction.DESCENDING)
+                .limit(1)
                 .get()
                 .addOnSuccessListener { documents ->
                     registrationStatus = documents.firstOrNull()?.getString("status") ?: "unknown"
@@ -153,7 +155,7 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
                                 teamSize = teamSize.toInt(),
                                 teamMembers = teamMemberNames,
                                 onSuccess = {
-                                    registrationStatus = "pending" // Ažuriraj status na "pending" lokalno
+                                    registrationStatus = "pending" // Lokalno ažuriramo status
                                 }
                             )
                         } else {
@@ -164,7 +166,7 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
                             ).show()
                         }
                     },
-                    enabled = buttonEnabled, // Dugme je aktivno samo ako je status "rejected"
+                    enabled = buttonEnabled,
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -176,10 +178,6 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
 }
 
 
-
-
-
-
 fun fetchClientRegistrations(
     userId: String,
     onQuizzesFetched: (List<RegisteredQuiz>) -> Unit,
@@ -189,24 +187,29 @@ fun fetchClientRegistrations(
 
     db.collection("registrations")
         .whereEqualTo("userId", userId)
+        .orderBy("timeStamp", Query.Direction.DESCENDING)
         .get()
         .addOnSuccessListener { registrationDocs ->
-            val registeredQuizIds = registrationDocs.documents.map { doc ->
-                doc.getString("quizId") to doc.getString("status")
-            }.filterNotNull()
+            val registeredQuizIdsWithStatus = registrationDocs.documents.mapNotNull { doc ->
+                val quizId = doc.getString("quizId")
+                val status = doc.getString("status")
+                if (quizId != null && status != null) quizId to status else null
+            }.distinctBy { it.first }
 
-            if (registeredQuizIds.isEmpty()) {
+            if (registeredQuizIdsWithStatus.isEmpty()) {
                 onQuizzesFetched(emptyList())
                 return@addOnSuccessListener
             }
 
+            val quizIds = registeredQuizIdsWithStatus.map { it.first }
+            val statusMap = registeredQuizIdsWithStatus.toMap()
+
             db.collection("quizzes")
-                .whereIn(FieldPath.documentId(), registeredQuizIds.map { it.first })
+                .whereIn(FieldPath.documentId(), quizIds)
                 .get()
                 .addOnSuccessListener { quizDocs ->
                     val quizzes = quizDocs.mapNotNull { document ->
                         val quizId = document.id
-                        val status = registeredQuizIds.find { it.first == quizId }?.second.orEmpty()
                         RegisteredQuiz(
                             id = quizId,
                             name = document.getString("name").orEmpty(),
@@ -215,7 +218,7 @@ fun fetchClientRegistrations(
                             dateTime = document.getString("dateTime").orEmpty(),
                             dateObject = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                                 .parse(document.getString("dateTime").orEmpty()) ?: Date(),
-                            status = status // Dodan status prijave
+                            status = statusMap[quizId] ?: "unknown" // Povlačimo status iz `registrations`
                         )
                     }
                     onQuizzesFetched(quizzes)
@@ -224,6 +227,7 @@ fun fetchClientRegistrations(
         }
         .addOnFailureListener { e -> onError("Error fetching registrations: ${e.message}") }
 }
+
 
 @Composable
 fun StatusIndicator(status: String) {
