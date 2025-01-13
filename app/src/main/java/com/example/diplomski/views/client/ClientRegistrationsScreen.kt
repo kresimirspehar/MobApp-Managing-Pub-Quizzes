@@ -1,5 +1,6 @@
 package com.example.diplomski.views.client
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,14 +62,22 @@ fun ClientRegistrationsScreen() {
 
         LazyColumn {
             items(registeredQuizzes.value) { quiz ->
-                ClientQuizCard(quiz)
+                ClientQuizCard(
+                    quiz = quiz,
+                    registeredQuizzes = registeredQuizzes,
+                    errorMessage = errorMessage
+                )
             }
         }
     }
 }
 
 @Composable
-fun ClientQuizCard(quiz: RegisteredQuiz) {
+fun ClientQuizCard(
+    quiz: RegisteredQuiz,
+    registeredQuizzes: MutableState<List<RegisteredQuiz>>,
+    errorMessage: MutableState<String>
+) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
@@ -85,14 +94,17 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
         currentUser?.let {
             db.collection("registrations")
                 .whereEqualTo("userId", it.uid)
+                .whereEqualTo("quizId", quiz.id)
                 .orderBy("timeStamp", Query.Direction.DESCENDING)
                 .limit(1)
                 .get()
                 .addOnSuccessListener { documents ->
                     registrationStatus = documents.firstOrNull()?.getString("status") ?: "unknown"
                 }
-                .addOnFailureListener {
-                    Toast.makeText(context, "Failed to fetch registration status.", Toast.LENGTH_SHORT).show()
+                .addOnFailureListener { exception ->
+                    if (exception != null) {
+                        Log.e("Error", "Failed to fetch registration status: ${exception.message}")
+                    }
                 }
         }
     }
@@ -155,7 +167,13 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
                                 teamSize = teamSize.toInt(),
                                 teamMembers = teamMemberNames,
                                 onSuccess = {
-                                    registrationStatus = "pending" // Lokalno ažuriramo status
+                                    registrationStatus = "pending"
+                                    // Osveži podatke nakon uspešne prijave
+                                    fetchClientRegistrations(
+                                        userId = currentUser?.uid.orEmpty(),
+                                        onQuizzesFetched = { quizzes -> registeredQuizzes.value = quizzes },
+                                        onError = { errorMessage.value = it }
+                                    )
                                 }
                             )
                         } else {
@@ -166,11 +184,18 @@ fun ClientQuizCard(quiz: RegisteredQuiz) {
                             ).show()
                         }
                     },
-                    enabled = buttonEnabled,
+                    enabled = registrationStatus == "rejected" || registrationStatus == "not_registered",
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (registrationStatus == "rejected") "Register Again" else "Pending Approval")
+                    Text(
+                        when (registrationStatus) {
+                            "pending" -> "Pending Approval"
+                            "accepted" -> "Registered"
+                            "rejected" -> "Register Again"
+                            else -> "Register"
+                        }
+                    )
                 }
             }
         }
@@ -190,19 +215,25 @@ fun fetchClientRegistrations(
         .orderBy("timeStamp", Query.Direction.DESCENDING)
         .get()
         .addOnSuccessListener { registrationDocs ->
-            val registeredQuizIdsWithStatus = registrationDocs.documents.mapNotNull { doc ->
-                val quizId = doc.getString("quizId")
-                val status = doc.getString("status")
-                if (quizId != null && status != null) quizId to status else null
-            }.distinctBy { it.first }
+            registrationDocs.documents.forEach {
+            }
+            val registeredQuizIdsWithStatus = registrationDocs.documents.groupBy { it.getString("quizId") }
+                .mapNotNull { (quizId, docs) ->
+                    // Pronađi najnoviji dokument za svaki `quizId`
+                    val latestDoc = docs.maxByOrNull { it.getLong("timeStamp") ?: 0L }
+                    Log.d("Debug", "QuizId: $quizId, Latest TimeStamp: ${latestDoc?.getLong("timeStamp")}, Status: ${latestDoc?.getString("status")}")
+                    val status = latestDoc?.getString("status")
+                    if (quizId != null && status != null) quizId to status else null
+                }.toMap()
+
 
             if (registeredQuizIdsWithStatus.isEmpty()) {
                 onQuizzesFetched(emptyList())
                 return@addOnSuccessListener
             }
 
-            val quizIds = registeredQuizIdsWithStatus.map { it.first }
-            val statusMap = registeredQuizIdsWithStatus.toMap()
+            val quizIds = registeredQuizIdsWithStatus.keys.toList()
+            val statusMap = registeredQuizIdsWithStatus
 
             db.collection("quizzes")
                 .whereIn(FieldPath.documentId(), quizIds)
