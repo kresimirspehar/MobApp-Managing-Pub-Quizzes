@@ -32,7 +32,7 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
     val decodedQuizName = URLDecoder.decode(quizName, StandardCharsets.UTF_8.toString())
     val decodedQuizDateTime = URLDecoder.decode(quizDateTime, StandardCharsets.UTF_8.toString())
 
-    val registrations = remember { mutableStateOf<List<Registration>>(emptyList()) }
+    val groupedRegistrations = remember { mutableStateOf<Map<String, List<Registration>>>(emptyMap()) }
     val errorMessage = remember { mutableStateOf("") }
     var listener by remember { mutableStateOf<ListenerRegistration?>(null) }
 
@@ -40,7 +40,7 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
     LaunchedEffect(quizId) {
         listener = fetchRegistrationsForQuiz(
             quizId,
-            onSuccess = { registrations.value = it },
+            onSuccess = { groupedRegistrations.value = it },
             onError = { errorMessage.value = it }
         )
     }
@@ -74,14 +74,23 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
         }
 
         LazyColumn {
-            items(registrations.value) { registration ->
-                RegistrationCard(registration) { action ->
-                    updateRegistrationStatus(
-                        registration.id,
-                        action,
-                        onSuccess = { /* Success callback */ },
-                        onError = { errorMessage.value = it }
+            groupedRegistrations.value.forEach { (userId, registrations) ->
+                item {
+                    Text(
+                        text = "User: ${registrations.firstOrNull()?.userName.orEmpty()}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(vertical = 8.dp)
                     )
+                }
+                items(registrations) { registration ->
+                    RegistrationCard(registration) { action ->
+                        updateRegistrationStatus(
+                            registration.id,
+                            action,
+                            onSuccess = { /* Success callback */ },
+                            onError = { errorMessage.value = it }
+                        )
+                    }
                 }
             }
         }
@@ -90,7 +99,7 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
 
 fun fetchRegistrationsForQuiz(
     quizId: String,
-    onSuccess: (List<Registration>) -> Unit,
+    onSuccess: (Map<String, List<Registration>>) -> Unit,
     onError: (String) -> Unit
 ): ListenerRegistration {
     val db = FirebaseFirestore.getInstance()
@@ -104,8 +113,6 @@ fun fetchRegistrationsForQuiz(
 
             if (snapshot != null) {
                 val registrations = mutableListOf<Registration>()
-
-                // Koristimo batch operacije za paralelno dohvaćanje korisničkih imena
                 val userFetchTasks = mutableListOf<Task<DocumentSnapshot>>()
 
                 snapshot.documents.forEach { document ->
@@ -141,7 +148,6 @@ fun fetchRegistrationsForQuiz(
                                 )
                             )
                         }.addOnFailureListener {
-                            // Ako dohvat korisničkog imena ne uspije, koristimo default vrijednost
                             registrations.add(
                                 Registration(
                                     id = document.id,
@@ -158,13 +164,15 @@ fun fetchRegistrationsForQuiz(
 
                 // Čekaj da svi dohvatni zadaci završe prije povrata rezultata
                 Tasks.whenAllComplete(userFetchTasks).addOnCompleteListener {
-                    onSuccess(registrations)
+                    val groupedRegistrations = registrations.groupBy { it.userId }
+                    onSuccess(groupedRegistrations)
                 }.addOnFailureListener { exception ->
                     onError("Failed to fetch user details: ${exception.message}")
                 }
             }
         }
 }
+
 
 
 
@@ -189,14 +197,14 @@ fun RegistrationCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "User: ${registration.userName}", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Team Size: ${registration.teamSize}")
             Text(text = "Team Members: ${registration.teamMembers.joinToString(", ")}")
             Text(text = "Status: ${registration.status}", style = MaterialTheme.typography.bodyMedium)
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
