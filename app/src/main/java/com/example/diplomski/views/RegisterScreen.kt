@@ -185,7 +185,7 @@ fun registerWithEmailAndPassword(
                     .set(user)
                     .addOnSuccessListener {
                         onRegisterSuccess()
-                        navigateToHome(navController, role)
+                        navigateToHomeFromRegister(navController, role)
                     }
                     .addOnFailureListener { e ->
                         Toast.makeText(context, "Failed to save user: ${e.message}", Toast.LENGTH_LONG).show()
@@ -197,12 +197,22 @@ fun registerWithEmailAndPassword(
 }
 
 
-fun navigateToHome(navController: NavController, role: String) {
+fun navigateToHomeFromRegister(navController: NavController, role: String) {
     when (role) {
-        "Client" -> navController.navigate("client_home")
-        "Admin" -> navController.navigate("admin_home")
+        "Client" -> {
+            navController.navigate("client_home") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+        "Admin" -> {
+            navController.navigate("admin_home") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
     }
 }
+
+
 
 
 

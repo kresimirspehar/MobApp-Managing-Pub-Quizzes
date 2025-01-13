@@ -126,7 +126,7 @@ fun AdminProfileScreen(navController: NavController) {
             onClick = {
                 FirebaseAuth.getInstance().signOut()
                 navController.navigate("login") {
-                    popUpTo("admin_home") { inclusive = true }
+                    popUpTo(0) { inclusive = true }
                 }
             },
             modifier = Modifier

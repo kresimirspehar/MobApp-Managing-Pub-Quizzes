@@ -151,7 +151,7 @@ fun signInWithEmailAndPassword(
                     .addOnSuccessListener { document ->
                         val role = document.getString("role")
                         if (!role.isNullOrEmpty()) {
-                            navigateToHome(navController, role)
+                            navigateToHomeFromLogin(navController, role)
                         } else {
                             Toast.makeText(context, "Role not found! Please contact support.", Toast.LENGTH_SHORT).show()
                         }
@@ -163,6 +163,21 @@ fun signInWithEmailAndPassword(
                 Toast.makeText(context, "Login Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
             }
         }
+}
+
+fun navigateToHomeFromLogin(navController: NavController, role: String) {
+    when (role) {
+        "Client" -> {
+            navController.navigate("client_home") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+        "Admin" -> {
+            navController.navigate("admin_home") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 }
 
 

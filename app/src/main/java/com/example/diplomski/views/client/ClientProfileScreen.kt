@@ -128,7 +128,7 @@ fun ClientProfileScreen(navController: NavController) {
             onClick = {
                 FirebaseAuth.getInstance().signOut()
                 navController.navigate("login") {
-                    popUpTo("client_home") { inclusive = true }
+                    popUpTo(0) { inclusive = true }
                 }
             },
             modifier = Modifier
