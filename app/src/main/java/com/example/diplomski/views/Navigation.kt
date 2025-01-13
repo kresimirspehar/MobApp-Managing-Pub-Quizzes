@@ -55,9 +55,11 @@ fun AppNavigation() {
             composable("client_profile") { ClientProfileScreen(navController) }
             composable("admin_profile") { AdminProfileScreen(navController) }
             composable("client_registrations") { ClientRegistrationsScreen() }
-            composable("quiz_registrations/{quizId}") { backStackEntry ->
+            composable("quiz_registrations/{quizId}/{quizName}/{quizDateTime}") { backStackEntry ->
                 val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
-                QuizRegistrationsScreen(navController, quizId)
+                val quizName = backStackEntry.arguments?.getString("quizName").orEmpty()
+                val quizDateTime = backStackEntry.arguments?.getString("quizDateTime").orEmpty()
+                QuizRegistrationsScreen(navController, quizId, quizName, quizDateTime)
             }
             composable("edit_quiz/{quizId}") { backStackEntry ->
                 val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()

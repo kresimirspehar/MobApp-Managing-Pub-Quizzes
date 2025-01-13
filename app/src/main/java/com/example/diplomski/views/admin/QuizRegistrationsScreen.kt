@@ -13,6 +13,8 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 
 
@@ -26,7 +28,10 @@ data class Registration(
 )
 
 @Composable
-fun QuizRegistrationsScreen(navController: NavController, quizId: String) {
+fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizName: String, quizDateTime: String) {
+    val decodedQuizName = URLDecoder.decode(quizName, StandardCharsets.UTF_8.toString())
+    val decodedQuizDateTime = URLDecoder.decode(quizDateTime, StandardCharsets.UTF_8.toString())
+
     val registrations = remember { mutableStateOf<List<Registration>>(emptyList()) }
     val errorMessage = remember { mutableStateOf("") }
     var listener by remember { mutableStateOf<ListenerRegistration?>(null) }
@@ -53,8 +58,16 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String) {
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
-        Text("Registrations for Quiz", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Registrations for: $decodedQuizName",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text(
+            text = "Date and Time: $decodedQuizDateTime",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
         if (errorMessage.value.isNotEmpty()) {
             Text(text = errorMessage.value, color = MaterialTheme.colorScheme.error)

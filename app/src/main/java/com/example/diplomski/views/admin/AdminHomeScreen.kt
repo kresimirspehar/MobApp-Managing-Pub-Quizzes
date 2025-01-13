@@ -36,11 +36,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import android.net.Uri
 import kotlin.math.exp
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 data class Quiz(
     val id: String,
@@ -191,7 +195,9 @@ fun ExpandableCard(
                 // Dodavanje gumba za pregled prijava
                 Button(
                     onClick = {
-                        navController.navigate("quiz_registrations/${quiz.id}")
+                        val encodedQuizName = URLEncoder.encode(quiz.name, StandardCharsets.UTF_8.toString())
+                        val encodedQuizDateTime = URLEncoder.encode(quiz.dateTime, StandardCharsets.UTF_8.toString())
+                        navController.navigate("quiz_registrations/${quiz.id}/$encodedQuizName/$encodedQuizDateTime")
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
