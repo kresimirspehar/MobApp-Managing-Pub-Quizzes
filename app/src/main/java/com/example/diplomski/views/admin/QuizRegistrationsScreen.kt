@@ -36,11 +36,36 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
     val errorMessage = remember { mutableStateOf("") }
     var listener by remember { mutableStateOf<ListenerRegistration?>(null) }
 
+    val db = FirebaseFirestore.getInstance()
+    var acceptedCount by remember { mutableStateOf(0) }
+    var totalSeats by remember { mutableStateOf(0) }
+
+    LaunchedEffect(quizId) {
+        db.collection("registrations")
+            .whereEqualTo("quizId", quizId)
+            .whereEqualTo("status", "accepted")
+            .get()
+            .addOnSuccessListener { documents ->
+                acceptedCount = documents.size()
+            }
+            .addOnFailureListener { errorMessage.value = "Failed to fetch accepted registrations: ${it.message}" }
+
+        db.collection("quizzes").document(quizId)
+            .get()
+            .addOnSuccessListener { document ->
+                totalSeats = document.getLong("seats")?.toInt() ?: 0
+            }
+            .addOnFailureListener { errorMessage.value = "Failed to fetch quiz details: ${it.message}" }
+    }
+
     // Start listening on component mount
     LaunchedEffect(quizId) {
         listener = fetchRegistrationsForQuiz(
             quizId,
-            onSuccess = { groupedRegistrations.value = it },
+            onSuccess = { registrations, count ->
+                groupedRegistrations.value = registrations
+                acceptedCount = count
+            },
             onError = { errorMessage.value = it }
         )
     }
@@ -65,6 +90,11 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
         )
         Text(
             text = "Date and Time: $decodedQuizDateTime",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Text(
+            text = "Teams: $acceptedCount/$totalSeats",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -99,7 +129,7 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
 
 fun fetchRegistrationsForQuiz(
     quizId: String,
-    onSuccess: (Map<String, List<Registration>>) -> Unit,
+    onSuccess: (Map<String, List<Registration>>, Int) -> Unit,
     onError: (String) -> Unit
 ): ListenerRegistration {
     val db = FirebaseFirestore.getInstance()
@@ -114,10 +144,17 @@ fun fetchRegistrationsForQuiz(
             if (snapshot != null) {
                 val registrations = mutableListOf<Registration>()
                 val userFetchTasks = mutableListOf<Task<DocumentSnapshot>>()
+                var acceptedCount = 0 // Broj prihvaćenih prijava
 
                 snapshot.documents.forEach { document ->
                     val userId = document.getString("userId").orEmpty()
                     val userName = document.getString("userName").orEmpty()
+                    val status = document.getString("status").orEmpty()
+
+                    // Povećajte broj prihvaćenih prijava ako je status "accepted"
+                    if (status == "accepted") {
+                        acceptedCount++
+                    }
 
                     if (userName.isNotEmpty()) {
                         // Ako userName postoji, dodaj ga odmah
@@ -126,7 +163,7 @@ fun fetchRegistrationsForQuiz(
                                 id = document.id,
                                 userId = userId,
                                 userName = userName,
-                                status = document.getString("status").orEmpty(),
+                                status = status,
                                 teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                 teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                             )
@@ -142,7 +179,7 @@ fun fetchRegistrationsForQuiz(
                                     id = document.id,
                                     userId = userId,
                                     userName = fetchedUserName,
-                                    status = document.getString("status").orEmpty(),
+                                    status = status,
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                     teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                                 )
@@ -153,7 +190,7 @@ fun fetchRegistrationsForQuiz(
                                     id = document.id,
                                     userId = userId,
                                     userName = "Unknown User",
-                                    status = document.getString("status").orEmpty(),
+                                    status = status,
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                     teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                                 )
@@ -165,7 +202,7 @@ fun fetchRegistrationsForQuiz(
                 // Čekaj da svi dohvatni zadaci završe prije povrata rezultata
                 Tasks.whenAllComplete(userFetchTasks).addOnCompleteListener {
                     val groupedRegistrations = registrations.groupBy { it.userId }
-                    onSuccess(groupedRegistrations)
+                    onSuccess(groupedRegistrations, acceptedCount)
                 }.addOnFailureListener { exception ->
                     onError("Failed to fetch user details: ${exception.message}")
                 }
