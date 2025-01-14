@@ -38,6 +38,7 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
     var fee by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("") }
     var dateTime by remember { mutableStateOf("") }
+    var additionalInfo by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
     val calendar = java.util.Calendar.getInstance()
@@ -88,6 +89,7 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
                 fee = document.getLong("fee")?.toString().orEmpty()
                 seats = document.getLong("seats")?.toString().orEmpty()
                 dateTime = document.getString("dateTime").orEmpty()
+                additionalInfo = document.getString("additionalInfo").orEmpty()
 
                 // Postavi inicijalni datum i vrijeme u kalendar
                 dateFormat.parse(dateTime)?.let {
@@ -165,6 +167,14 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        OutlinedTextField(
+            value = additionalInfo,
+            onValueChange = { additionalInfo = it }, // Omogućite unos dodatnih informacija
+            label = { Text("Additional Information (Optional)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
         Button(
             onClick = {
                 // Validacija unosa
@@ -201,7 +211,8 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
                             "quizType" to quizType,
                             "fee" to feeValue,
                             "seats" to seatsValue,
-                            "dateTime" to dateTime
+                            "dateTime" to dateTime,
+                            "additionalInfo" to additionalInfo
                         )
                         db.collection("quizzes").document(quizId).update(updatedQuiz)
                             .addOnSuccessListener {

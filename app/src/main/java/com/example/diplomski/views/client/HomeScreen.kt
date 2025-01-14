@@ -150,7 +150,8 @@ fun fetchAllQuizzes(
                     location = document.getString("location") ?: "",
                     fee = document.getLong("fee")?.toInt() ?: 0,
                     seats = document.getLong("seats")?.toInt() ?: 0,
-                    dateTime = document.getString("dateTime") ?: ""
+                    dateTime = document.getString("dateTime") ?: "",
+                    additionalInfo = document.getString("additionalInfo") ?: ""
                 )
             }
             onQuizzesFetched(quizzes)
@@ -198,15 +199,25 @@ fun QuizCard(quiz: Quiz) {
             Text(text = "Date: ${quiz.dateTime}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = if (remainingSeats.value > 0)
-                    "Application available: ${remainingSeats.value}"
+                    "Teams available for joining: ${remainingSeats.value}"
                 else
                     "All places filled",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (remainingSeats.value > 0) Color.Green else Color.Red
+                color = if (remainingSeats.value > 0) Color.Blue else Color.Red
             )
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Fee: ${quiz.fee} EUR", style = MaterialTheme.typography.bodySmall)
+
+                if (quiz.additionalInfo.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Additional Info: ${quiz.additionalInfo}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 TextField(
                     value = teamSize,
                     onValueChange = {

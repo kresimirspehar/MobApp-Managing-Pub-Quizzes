@@ -53,7 +53,8 @@ data class Quiz(
     val location: String,
     val fee: Int,
     val seats: Int,
-    val dateTime: String
+    val dateTime: String,
+    val additionalInfo: String = ""
 )
 
 
@@ -83,7 +84,8 @@ fun fetchQuizzes(
                     location = document.getString("location") ?: "",
                     fee = document.getLong("fee")?.toInt() ?: 0,
                     seats = document.getLong("seats")?.toInt() ?: 0,
-                    dateTime = document.getString("dateTime") ?: ""
+                    dateTime = document.getString("dateTime") ?: "",
+                    additionalInfo = document.getString("additionalInfo") ?: ""
                 )
             }
             onQuizzesFetched(quizzes)
@@ -189,7 +191,17 @@ fun ExpandableCard(
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Fee: ${quiz.fee} USD", style = MaterialTheme.typography.bodySmall)
-                Text(text = "Teams: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Number of teams available: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
+
+                if (quiz.additionalInfo.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Additional Info: ${quiz.additionalInfo}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Dodavanje gumba za pregled prijava
@@ -249,6 +261,7 @@ fun AddQuizScreen(navController: NavController) {
     var errorMessage by remember { mutableStateOf("") }
     val feeError = remember { mutableStateOf<String?>(null) }
     val seatsError = remember { mutableStateOf<String?>(null) }
+    var additionalInfo by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     val calendar = java.util.Calendar.getInstance()
@@ -397,6 +410,15 @@ fun AddQuizScreen(navController: NavController) {
                 }
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = additionalInfo,
+            onValueChange = { additionalInfo = it },
+            label = { Text("Additional Information (Optional)")},
+            modifier = Modifier.fillMaxWidth()
+        )
+
 
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -418,6 +440,7 @@ fun AddQuizScreen(navController: NavController) {
                         fee = fee.toIntOrNull() ?: 0,
                         seats = seats.toIntOrNull() ?: 0,
                         dateTime = dateTime.value,
+                        additionalInfo = additionalInfo,
                         context = context,
                         onSuccess = {
                             Toast.makeText(context, "Quiz added successfully!", Toast.LENGTH_SHORT).show()
@@ -445,6 +468,7 @@ fun addQuizToFirestore(
     fee: Int,
     seats: Int,
     dateTime: String,
+    additionalInfo: String,
     context: Context,
     onSuccess: () -> Unit,
     onFailure: (String) -> Unit
@@ -464,6 +488,7 @@ fun addQuizToFirestore(
         "fee" to fee,
         "seats" to seats,
         "dateTime" to dateTime,
+        "additionalInfo" to additionalInfo,
         "authorId" to currentUser.uid
     )
 
