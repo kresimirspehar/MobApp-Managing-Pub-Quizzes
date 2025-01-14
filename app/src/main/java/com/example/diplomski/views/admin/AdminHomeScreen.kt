@@ -190,7 +190,7 @@ fun ExpandableCard(
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Fee: ${quiz.fee} USD", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Fee: ${quiz.fee} EUR", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Number of teams available: ${quiz.seats}", style = MaterialTheme.typography.bodySmall)
 
                 if (quiz.additionalInfo.isNotBlank()) {

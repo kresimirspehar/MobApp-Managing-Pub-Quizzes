@@ -165,6 +165,7 @@ fun fetchAllQuizzes(
 fun QuizCard(quiz: Quiz) {
 
     var isExpanded by remember { mutableStateOf(false) }
+    var teamName by remember { mutableStateOf("") }
     var teamSize by remember { mutableStateOf("") }
     var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
     val context = LocalContext.current
@@ -218,6 +219,16 @@ fun QuizCard(quiz: Quiz) {
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+                OutlinedTextField(
+                    value = teamName,
+                    onValueChange = {teamName = it},
+                    label = { Text("Team Name")},
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 TextField(
                     value = teamSize,
                     onValueChange = {
@@ -256,23 +267,29 @@ fun QuizCard(quiz: Quiz) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Button(
                     onClick = {
-                        val size = teamSize.toIntOrNull()
-                        if (size == null || size <= 0 || size > 5) {
+                        if (teamName.isBlank()) {
+                            Toast.makeText(
+                                context,
+                                "Please enter a team name.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else if (teamSize.toIntOrNull() == null || teamSize.toInt() !in 1..5) {
                             Toast.makeText(
                                 context,
                                 "Team size must be between 1 and 5.",
                                 Toast.LENGTH_SHORT
                             ).show()
-                        } else if (teamMemberNames.size != size || teamMemberNames.any { it.isBlank() }) {
+                        } else if (teamMemberNames.any { it.isBlank() }) {
                             Toast.makeText(
                                 context,
                                 "Please fill in all team member names.",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            registerForQuiz(context, quiz.id, size, teamMemberNames) {
+                            registerForQuiz(context, quiz.id, teamName, teamSize.toInt(), teamMemberNames) {
                                 registrationStatus.value = "pending"
                                 isExpanded = false
                             }
@@ -298,6 +315,7 @@ fun QuizCard(quiz: Quiz) {
 fun registerForQuiz(
     context: Context,
     quizId: String,
+    teamName: String,
     teamSize: Int,
     teamMembers: List<String>,
     onSuccess: () -> Unit
@@ -348,6 +366,7 @@ fun registerForQuiz(
                                     "userName" to userName,
                                     "quizId" to quizId,
                                     "status" to "pending",
+                                    "teamName" to teamName,
                                     "teamSize" to teamSize,
                                     "teamMembers" to teamMembers,
                                     "timeStamp" to System.currentTimeMillis()

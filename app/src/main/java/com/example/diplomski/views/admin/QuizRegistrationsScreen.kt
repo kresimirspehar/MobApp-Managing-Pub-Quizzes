@@ -23,6 +23,7 @@ data class Registration(
     val userId: String,
     val userName: String,
     val status: String,
+    val teamName: String = "",
     val teamSize: Int = 0,
     val teamMembers: List<String> = emptyList()
 )
@@ -164,6 +165,7 @@ fun fetchRegistrationsForQuiz(
                                 userId = userId,
                                 userName = userName,
                                 status = status,
+                                teamName = document.getString("teamName").orEmpty(),
                                 teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                 teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                             )
@@ -180,6 +182,7 @@ fun fetchRegistrationsForQuiz(
                                     userId = userId,
                                     userName = fetchedUserName,
                                     status = status,
+                                    teamName = document.getString("teamName").orEmpty(),
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                     teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                                 )
@@ -191,6 +194,7 @@ fun fetchRegistrationsForQuiz(
                                     userId = userId,
                                     userName = "Unknown User",
                                     status = status,
+                                    teamName = document.getString("teamName").orEmpty(),
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
                                     teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
                                 )
@@ -238,6 +242,7 @@ fun RegistrationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "Team Name: ${registration.teamName}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Team Size: ${registration.teamSize}")
             Text(text = "Team Members: ${registration.teamMembers.joinToString(", ")}")
             Text(text = "Status: ${registration.status}", style = MaterialTheme.typography.bodyMedium)

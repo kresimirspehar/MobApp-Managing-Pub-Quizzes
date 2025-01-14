@@ -86,6 +86,7 @@ fun ClientQuizCard(
     val buttonEnabled = registrationStatus == "rejected"
     val buttonColor = if (buttonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
+    var teamName by remember { mutableStateOf("") }
     var teamSize by remember { mutableStateOf("") }
     var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
 
@@ -126,8 +127,20 @@ fun ClientQuizCard(
                 Text(text = "Status: ${registrationStatus.capitalize()}")
             }
 
+
+
+
+
             if (registrationStatus == "rejected") {
-                // Unos veličine tima
+                OutlinedTextField(
+                    value = teamName,
+                    onValueChange = { teamName = it },
+                    label = { Text("Team Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = teamSize,
                     onValueChange = { size ->
@@ -143,7 +156,6 @@ fun ClientQuizCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Unos članova tima
                 teamMemberNames.forEachIndexed { index, name ->
                     OutlinedTextField(
                         value = name,
@@ -160,10 +172,13 @@ fun ClientQuizCard(
 
                 Button(
                     onClick = {
-                        if (teamSize.isNotEmpty() && teamMemberNames.size == teamSize.toInt() && teamMemberNames.all { it.isNotBlank() }) {
+                        if (teamName.isBlank()) {
+                            Toast.makeText(context, "Please enter a team name.", Toast.LENGTH_SHORT).show()
+                        } else if (teamSize.isNotEmpty() && teamMemberNames.size == teamSize.toInt() && teamMemberNames.all { it.isNotBlank() }) {
                             registerForQuiz(
                                 context = context,
                                 quizId = quiz.id,
+                                teamName = teamName, // Dodano prosljeđivanje imena tima
                                 teamSize = teamSize.toInt(),
                                 teamMembers = teamMemberNames,
                                 onSuccess = {
