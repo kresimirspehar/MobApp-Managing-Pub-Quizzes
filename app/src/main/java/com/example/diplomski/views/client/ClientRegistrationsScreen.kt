@@ -266,7 +266,7 @@ fun fetchClientRegistrations(
                                 .parse(document.getString("dateTime").orEmpty()) ?: Date(),
                             status = statusMap[quizId] ?: "unknown" // Povlačimo status iz `registrations`
                         )
-                    }
+                    }.sortedBy { it.dateObject }
                     onQuizzesFetched(quizzes)
                 }
                 .addOnFailureListener { e -> onError("Error fetching quizzes: ${e.message}") }
