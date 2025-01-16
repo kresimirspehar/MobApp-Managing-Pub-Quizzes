@@ -84,11 +84,15 @@ fun ClientQuizCard(
 
     var registrationStatus by remember { mutableStateOf(quiz.status) } // Osvežava se na osnovu baze
     val buttonEnabled = registrationStatus == "rejected"
-    val buttonColor = if (buttonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    val buttonColor =
+        if (buttonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(
+            alpha = 0.5f
+        )
 
     var teamName by remember { mutableStateOf("") }
     var teamSize by remember { mutableStateOf("") }
     var teamMemberNames by remember { mutableStateOf(listOf<String>()) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     // Osveži status prijave svaki put kada se ekran prikaže
     LaunchedEffect(quiz.id) {
@@ -116,7 +120,25 @@ fun ClientQuizCard(
             .padding(vertical = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
+            // Redak za naziv kviza i ikonicu za brisanje
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = quiz.name, style = MaterialTheme.typography.headlineSmall)
+
+                IconButton(onClick = { showDeleteConfirmation = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = "Delete Registration",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(text = "Type: ${quiz.quizType}")
             Text(text = "Location: ${quiz.location}")
             Text(text = "Date: ${quiz.dateTime}")
@@ -127,11 +149,9 @@ fun ClientQuizCard(
                 Text(text = "Status: ${registrationStatus.capitalize()}")
             }
 
-
-
-
-
             if (registrationStatus == "rejected") {
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = teamName,
                     onValueChange = { teamName = it },
@@ -170,6 +190,8 @@ fun ClientQuizCard(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Button(
                     onClick = {
                         if (teamName.isBlank()) {
@@ -178,12 +200,11 @@ fun ClientQuizCard(
                             registerForQuiz(
                                 context = context,
                                 quizId = quiz.id,
-                                teamName = teamName, // Dodano prosljeđivanje imena tima
+                                teamName = teamName,
                                 teamSize = teamSize.toInt(),
                                 teamMembers = teamMemberNames,
                                 onSuccess = {
                                     registrationStatus = "pending"
-                                    // Osveži podatke nakon uspešne prijave
                                     fetchClientRegistrations(
                                         userId = currentUser?.uid.orEmpty(),
                                         onQuizzesFetched = { quizzes -> registeredQuizzes.value = quizzes },
@@ -213,6 +234,43 @@ fun ClientQuizCard(
                     )
                 }
             }
+        }
+
+        // Dialog za potvrdu brisanja
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Confirm Deletion") },
+                text = { Text("Are you sure you want to delete this registration?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        deleteRegistration(
+                            quizId = quiz.id,
+                            userId = currentUser?.uid.orEmpty(),
+                            onSuccess = {
+                                Toast.makeText(context, "Registration deleted successfully!", Toast.LENGTH_SHORT).show()
+                                fetchClientRegistrations(
+                                    userId = currentUser?.uid.orEmpty(),
+                                    onQuizzesFetched = { quizzes -> registeredQuizzes.value = quizzes },
+                                    onError = { errorMessage.value = it }
+                                )
+                                showDeleteConfirmation = false
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, "Failed to delete registration: $error", Toast.LENGTH_SHORT).show()
+                                showDeleteConfirmation = false
+                            }
+                        )
+                    }) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                        Text("No")
+                    }
+                }
+            )
         }
     }
 }
@@ -291,6 +349,33 @@ fun StatusIndicator(status: String) {
         modifier = Modifier.size(24.dp)
     )
 }
+
+fun deleteRegistration(
+    quizId: String,
+    userId: String,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("registrations")
+        .whereEqualTo("quizId", quizId)
+        .whereEqualTo("userId", userId)
+        .get()
+        .addOnSuccessListener { snapshot ->
+            val document = snapshot.documents.firstOrNull()
+            if (document != null) {
+                db.collection("registrations").document(document.id)
+                    .delete()
+                    .addOnSuccessListener { onSuccess() }
+                    .addOnFailureListener { e -> onError(e.message ?: "Error deleting registration") }
+            } else {
+                onError("Registration not found")
+            }
+        }
+        .addOnFailureListener { e -> onError(e.message ?: "Error fetching registration") }
+}
+
 
 
 
