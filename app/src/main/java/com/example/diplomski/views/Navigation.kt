@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.diplomski.views.admin.AcceptedTeamsScreen
 import com.example.diplomski.views.admin.AddQuizScreen
 import com.example.diplomski.views.admin.AdminHomeScreen
 import com.example.diplomski.views.admin.AdminProfileScreen
@@ -64,6 +65,10 @@ fun AppNavigation() {
             composable("edit_quiz/{quizId}") { backStackEntry ->
                 val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
                 EditQuizScreen(navController, quizId)
+            }
+            composable("accepted_teams/{quizId}") { backStackEntry ->
+                val quizId = backStackEntry.arguments?.getString("quizId").orEmpty()
+                AcceptedTeamsScreen(navController, quizId)
             }
         }
     }

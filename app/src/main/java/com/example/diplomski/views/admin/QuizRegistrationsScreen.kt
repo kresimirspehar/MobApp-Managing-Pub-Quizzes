@@ -100,6 +100,15 @@ fun QuizRegistrationsScreen(navController: NavController, quizId: String, quizNa
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        Button(
+            onClick = {
+                navController.navigate("accepted_teams/${quizId}")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("View Accepted Teams")
+        }
+
         if (errorMessage.value.isNotEmpty()) {
             Text(text = errorMessage.value, color = MaterialTheme.colorScheme.error)
         }
