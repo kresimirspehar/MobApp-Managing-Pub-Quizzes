@@ -25,7 +25,8 @@ data class Registration(
     val status: String,
     val teamName: String = "",
     val teamSize: Int = 0,
-    val teamMembers: List<String> = emptyList()
+    val teamMembers: List<String> = emptyList(),
+    val phone: String = ""
 )
 
 @Composable
@@ -176,7 +177,8 @@ fun fetchRegistrationsForQuiz(
                                 status = status,
                                 teamName = document.getString("teamName").orEmpty(),
                                 teamSize = document.getLong("teamSize")?.toInt() ?: 0,
-                                teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                                teamMembers = document.get("teamMembers") as? List<String> ?: emptyList(),
+                                phone = ""
                             )
                         )
                     } else {
@@ -185,6 +187,7 @@ fun fetchRegistrationsForQuiz(
                         userFetchTasks.add(userFetchTask)
                         userFetchTask.addOnSuccessListener { userDoc ->
                             val fetchedUserName = userDoc.getString("name").orEmpty()
+                            val fetchedPhone = userDoc.getString("phone").orEmpty()
                             registrations.add(
                                 Registration(
                                     id = document.id,
@@ -193,7 +196,8 @@ fun fetchRegistrationsForQuiz(
                                     status = status,
                                     teamName = document.getString("teamName").orEmpty(),
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
-                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList(),
+                                    phone = fetchedPhone
                                 )
                             )
                         }.addOnFailureListener {
@@ -205,7 +209,8 @@ fun fetchRegistrationsForQuiz(
                                     status = status,
                                     teamName = document.getString("teamName").orEmpty(),
                                     teamSize = document.getLong("teamSize")?.toInt() ?: 0,
-                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList()
+                                    teamMembers = document.get("teamMembers") as? List<String> ?: emptyList(),
+                                    phone = "n/a"
                                 )
                             )
                         }
