@@ -50,7 +50,9 @@ import java.nio.charset.StandardCharsets
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalFocusManager
-
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 
 data class Quiz(
@@ -273,6 +275,7 @@ fun AddQuizScreen(navController: NavController) {
     var additionalInfo by remember { mutableStateOf("") }
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val dateInteractionSource = remember { MutableInteractionSource() }
 
     val calendar = java.util.Calendar.getInstance()
     val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
@@ -438,17 +441,29 @@ fun AddQuizScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = dateTime.value,
-            onValueChange = {},
-            label = { Text("Date and Time") },
-            readOnly = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    datePickerDialog.show() // Prvo otvori DatePickerDialog
-                }
-        )
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .clickable { datePickerDialog.show() } // Klik bilo gdje
+        ) {
+            OutlinedTextField(
+                value = dateTime.value,
+                onValueChange = {},
+                label = { Text("Date and Time") },
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                enabled = true,
+                singleLine = true
+            )
+            // Transparentni sloj da osigura da klik bilo gdje radi
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(onClick = { datePickerDialog.show() })
+            )
+        }
+
+
 
         Spacer(modifier = Modifier.height(8.dp))
 
