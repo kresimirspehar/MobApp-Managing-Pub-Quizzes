@@ -42,9 +42,16 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import android.net.Uri
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import kotlin.math.exp
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+
+
 
 data class Quiz(
     val id: String,
@@ -108,6 +115,7 @@ fun AdminHomeScreen(navController: NavController) {
     val userEmail = currentUser?.email ?: "Unknown User"
     val userName = userEmail.substringBefore("@")
 
+
     // Dohvaćanje kvizova
     LaunchedEffect(Unit) {
         fetchQuizzes(
@@ -169,6 +177,7 @@ fun ExpandableCard(
     onDelete: (String) -> Unit
 ){
     val isExpanded = expandedCardIds.value.contains(quiz.id)
+
 
     Card(
         modifier = Modifier
@@ -263,6 +272,7 @@ fun AddQuizScreen(navController: NavController) {
     val seatsError = remember { mutableStateOf<String?>(null) }
     var additionalInfo by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     val calendar = java.util.Calendar.getInstance()
     val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
@@ -348,7 +358,14 @@ fun AddQuizScreen(navController: NavController) {
             value = location,
             onValueChange = { location = it },
             label = { Text("Location") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -358,44 +375,67 @@ fun AddQuizScreen(navController: NavController) {
             value = name,
             onValueChange = { name = it },
             label = { Text("Quiz Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+            )
         )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         OutlinedTextField(
             value = fee,
             onValueChange = {
-                fee = it
-                feeError.value = if (it.toIntOrNull() == null || it.toInt() < 0) {
-                    "Fee must be a non-negative number"
-                } else {
-                    null
+                if (it.length <= 3 && it.all { c -> c.isDigit() }) {
+                    fee = it
                 }
+                feeError.value = if (fee.toIntOrNull() == null || fee.toInt() < 0) {
+                    "Fee must be a non-negative number"
+                } else null
             },
             label = { Text("Fee") },
             modifier = Modifier.fillMaxWidth(),
-            isError = feeError.value != null
+            isError = feeError.value != null,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+            )
         )
-        if (feeError.value != null) {
-            Text(feeError.value!!, color = Color.Red, style = MaterialTheme.typography.bodySmall)
-        }
+
         Spacer(modifier = Modifier.height(8.dp))
+
         OutlinedTextField(
             value = seats,
             onValueChange = {
-                seats = it
-                seatsError.value = if (it.toIntOrNull() == null || it.toInt() <= 0) {
-                    "Teams must be a positive number"
-                } else {
-                    null
+                if (it.all { c -> c.isDigit() }) {
+                    seats = it
                 }
+                seatsError.value = if (seats.toIntOrNull() == null || seats.toInt() <= 0) {
+                    "Teams must be a positive number"
+                } else null
             },
             label = { Text("Number of Teams") },
             modifier = Modifier.fillMaxWidth(),
-            isError = seatsError.value != null
+            isError = seatsError.value != null,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    datePickerDialog.show() // Automatski otvori dijalog
+                }
+            )
         )
-        if (seatsError.value != null) {
-            Text(seatsError.value!!, color = Color.Red, style = MaterialTheme.typography.bodySmall)
-        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -415,8 +455,15 @@ fun AddQuizScreen(navController: NavController) {
         OutlinedTextField(
             value = additionalInfo,
             onValueChange = { additionalInfo = it },
-            label = { Text("Additional Information (Optional)")},
-            modifier = Modifier.fillMaxWidth()
+            label = { Text("Additional Information (Optional)") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            )
         )
 
 
