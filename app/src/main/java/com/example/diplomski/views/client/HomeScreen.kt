@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
@@ -36,6 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.diplomski.views.admin.Quiz
 import com.google.firebase.auth.FirebaseAuth
@@ -172,6 +177,7 @@ fun QuizCard(quiz: Quiz) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val registrationStatus = remember { mutableStateOf("not_registered") }
     val remainingSeats = remember { mutableStateOf(quiz.seats) }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         currentUser?.let {
@@ -222,9 +228,17 @@ fun QuizCard(quiz: Quiz) {
 
                 OutlinedTextField(
                     value = teamName,
-                    onValueChange = {teamName = it},
+                    onValueChange = {
+                        if (it.length <= 15) teamName = it
+                    },
                     label = { Text("Team Name")},
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus()}
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -232,37 +246,46 @@ fun QuizCard(quiz: Quiz) {
                 TextField(
                     value = teamSize,
                     onValueChange = {
-                        val size = it.toIntOrNull() ?: 0
-                        if (size in 1..5) {
+                        if (it.isEmpty() || (it.all { c -> c.isDigit() } && it.length == 1 && it.toIntOrNull() in 1..5)) {
                             teamSize = it
-                            // Adjust teamMemberNames size dynamically
-                            teamMemberNames = if (size > teamMemberNames.size) {
-                                teamMemberNames + List(size - teamMemberNames.size) { "" }
-                            } else {
-                                teamMemberNames.take(size)
-                            }
-                        } else {
-                            Toast.makeText(context, "Team size must be between 1 and 5.", Toast.LENGTH_SHORT).show()
+                            teamMemberNames = if (it.isNotEmpty()) List(it.toInt()) { "" } else emptyList()
                         }
                     },
-                    label = { Text("Team Size") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Team Size (1-5)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {  focusManager.clearFocus()  }
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Enter Team Member Names:")
+
                 teamMemberNames.forEachIndexed { index, name ->
                     TextField(
                         value = name,
                         onValueChange = { newName ->
-                            val updatedNames = teamMemberNames.toMutableList()
-                            updatedNames[index] = newName
-                            teamMemberNames = updatedNames
+                            if (newName.all { it.isLetter() || it == ' ' }) {
+                                val updated = teamMemberNames.toMutableList()
+                                updated[index] = newName
+                                teamMemberNames = updated
+                            }
                         },
                         label = { Text("Member ${index + 1}") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 4.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus()  }
+                        ),
+                        singleLine = true
                     )
                 }
 
