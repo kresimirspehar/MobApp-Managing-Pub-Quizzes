@@ -260,7 +260,7 @@ fun AddQuizScreen(navController: NavController) {
     val quizTypes = listOf(
         "Općeniti kviz", "Sportski kviz", "Glazbeni kviz", "Filmski kviz",
         "Tehnološki kviz", "Povijesni kviz", "Geografski kviz", "Literarni kviz",
-        "Kviz o pop kulturi", "Tematski kvizov", "Ostalo"
+        "Kviz o pop kulturi", "Tematski kviz", "Ostalo"
     )
     var selectedQuizType by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }

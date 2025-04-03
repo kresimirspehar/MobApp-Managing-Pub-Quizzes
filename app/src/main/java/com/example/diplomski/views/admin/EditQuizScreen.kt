@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -38,6 +43,11 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val quizTypes = listOf(
+        "Općeniti kviz", "Sportski kviz", "Glazbeni kviz", "Filmski kviz",
+        "Tehnološki kviz", "Povijesni kviz", "Geografski kviz", "Literarni kviz",
+        "Kviz o pop kulturi", "Tematski kviz", "Ostalo"
+    )
 
     // Stanja za podatke o kvizu
     var name by remember { mutableStateOf("") }
@@ -48,6 +58,7 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
     var dateTime by remember { mutableStateOf("") }
     var additionalInfo by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false)}
 
     val calendar = java.util.Calendar.getInstance()
     val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm", java.util.Locale.getDefault())
@@ -122,6 +133,42 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
             Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
         }
 
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = quizType,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Quiz Type") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Select Quiz Type",
+                        modifier = Modifier.clickable { expanded = true }
+                    )
+                },
+                enabled = true
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                quizTypes.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type) },
+                        onClick = {
+                            quizType = type
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -150,19 +197,6 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = quizType,
-            onValueChange = { quizType = it },
-            label = { Text("Quiz Type") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = fee,
