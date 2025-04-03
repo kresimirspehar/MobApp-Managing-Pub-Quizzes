@@ -33,6 +33,7 @@ fun LoginScreen(
     var errorMessage by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    var isLoading by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -41,120 +42,119 @@ fun LoginScreen(
                 Brush.verticalGradient(
                     colors = listOf(Color(0xFF64B5F6), Color(0xFF1976D2))
                 )
-            )
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Naslov za LoginScreen
-            Text(
-                text = "Welcome Back",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Polje za unos email-a
-            TextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email", color = Color.White) },
+        if (isLoading) {
+            CircularProgressIndicator(color = Color.White) // 👈 spinner
+        } else {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)}
-                ),
-                colors = TextFieldDefaults.textFieldColors(
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color.Gray,
-                    containerColor = Color.Transparent
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Welcome Back", style = MaterialTheme.typography.headlineMedium, color = Color.White)
 
-            // Polje za unos lozinke
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password", color = Color.White) },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        // Poziva login kada korisnik klikne "Done" / "OK"
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email", color = Color.White) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                    ),
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.Gray,
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.Gray,
+                        containerColor = Color.Transparent
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password", color = Color.White) },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (email.isEmpty() || password.isEmpty()) {
+                                errorMessage = "Please fill in all fields"
+                            } else {
+                                isLoading = true
+                                signInWithEmailAndPassword(
+                                    context,
+                                    email,
+                                    password,
+                                    navController,
+                                    onFinish = { isLoading = false }
+                                )
+                            }
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.Gray,
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.Gray,
+                        containerColor = Color.Transparent
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Button(
+                    onClick = {
                         if (email.isEmpty() || password.isEmpty()) {
                             errorMessage = "Please fill in all fields"
                         } else {
-                            signInWithEmailAndPassword(context, email, password, navController)
+                            isLoading = true
+                            signInWithEmailAndPassword(
+                                context,
+                                email,
+                                password,
+                                navController,
+                                onFinish = { isLoading = false }
+                            )
                         }
-                        focusManager.clearFocus()
-                    }
-                ),
-                colors = TextFieldDefaults.textFieldColors(
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color.Gray,
-                    containerColor = Color.Transparent
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF1976D2)
+                    )
+                ) {
+                    Text("Login")
+                }
 
-            // Prikaz poruke o grešci ako postoji
-            if (errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Dugme za prijavu
-            Button(
-                onClick = {
-                    if (email.isEmpty() || password.isEmpty()) {
-                        errorMessage = "Please fill in all fields"
-                    } else {
-                        signInWithEmailAndPassword(context, email, password, navController)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF1976D2)
-                )
-            ) {
-                Text("Login")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tekst i dugme za navigaciju na RegisterScreen
-            Text(
-                text = "Don't have an account?",
-                color = Color.White,
-                style = MaterialTheme.typography.bodySmall
-            )
-            TextButton(
-                onClick = { navController.navigate("register") },
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text("Go to Register", color = Color.White)
+                Text("Don't have an account?", color = Color.White)
+                TextButton(onClick = { navController.navigate("register") }) {
+                    Text("Go to Register", color = Color.White)
+                }
             }
         }
     }
@@ -164,7 +164,8 @@ fun signInWithEmailAndPassword(
     context: Context,
     email: String,
     password: String,
-    navController: NavController // Dodano za navigaciju
+    navController: NavController, // Dodano za navigaciju
+    onFinish: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -177,6 +178,7 @@ fun signInWithEmailAndPassword(
                 db.collection("users").document(userId).get()
                     .addOnSuccessListener { document ->
                         val role = document.getString("role")
+                        onFinish()
                         if (!role.isNullOrEmpty()) {
                             navigateToHomeFromLogin(navController, role)
                         } else {
@@ -184,9 +186,11 @@ fun signInWithEmailAndPassword(
                         }
                     }
                     .addOnFailureListener { e ->
+                        onFinish()
                         Toast.makeText(context, "Failed to fetch role: ${e.message}", Toast.LENGTH_LONG).show()
                     }
             } else {
+                onFinish()
                 Toast.makeText(context, "Login Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
             }
         }

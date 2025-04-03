@@ -34,6 +34,7 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("Client") } // Zadana vrijednost
+    var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
@@ -44,137 +45,128 @@ fun RegisterScreen(
                 Brush.verticalGradient(
                     colors = listOf(Color(0xFF64B5F6), Color(0xFF1976D2))
                 )
-            )
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Create an Account",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        if (isLoading) {
+            CircularProgressIndicator(color = Color.White)
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Create an Account", style = MaterialTheme.typography.headlineMedium, color = Color.White)
 
-            TextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email", color = Color.White) },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = Color.Transparent,
-                    focusedLabelColor = Color.White
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password", color = Color.White) },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                    }
-                ),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = Color.Transparent,
-                    focusedLabelColor = Color.White
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email", color = Color.White) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.Transparent,
+                        focusedLabelColor = Color.White
+                    )
                 )
-            )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // RadioButtonGroup za odabir role
-            Text(
-                text = "Select Role",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = role == "Client",
-                    onClick = { role = "Client" },
-                    colors = RadioButtonDefaults.colors(selectedColor = Color.White)
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password", color = Color.White) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus() }
+                    ),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.Transparent,
+                        focusedLabelColor = Color.White
+                    )
                 )
-                Text(
-                    text = "Client",
-                    color = Color.White,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                RadioButton(
-                    selected = role == "Admin",
-                    onClick = { role = "Admin" },
-                    colors = RadioButtonDefaults.colors(selectedColor = Color.White)
-                )
-                Text(
-                    text = "Admin",
-                    color = Color.White,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            if (errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = {
-                    if (email.isEmpty() || password.isEmpty()) {
-                        errorMessage = "Please fill in all fields"
-                    } else if (password.length < 6) {
-                        errorMessage = "Password must be at least 6 characters"
-                    } else {
-                        registerWithEmailAndPassword(context, email, password, role, navController) {
-                            errorMessage = ""
+                Text("Select Role", color = Color.White)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = role == "Client",
+                        onClick = { role = "Client" },
+                        colors = RadioButtonDefaults.colors(selectedColor = Color.White)
+                    )
+                    Text("Client", color = Color.White, modifier = Modifier.padding(start = 8.dp))
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = role == "Admin",
+                        onClick = { role = "Admin" },
+                        colors = RadioButtonDefaults.colors(selectedColor = Color.White)
+                    )
+                    Text("Admin", color = Color.White, modifier = Modifier.padding(start = 8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Button(
+                    onClick = {
+                        if (email.isEmpty() || password.isEmpty()) {
+                            errorMessage = "Please fill in all fields"
+                        } else if (password.length < 6) {
+                            errorMessage = "Password must be at least 6 characters"
+                        } else {
+                            isLoading = true
+                            registerWithEmailAndPassword(
+                                context,
+                                email,
+                                password,
+                                role,
+                                navController,
+                                onStart = { isLoading = true },
+                                onFinish = { isLoading = false },
+                                onRegisterSuccess = {
+                                    errorMessage = ""
+                                }
+                            )
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF1976D2)
-                )
-            ) {
-                Text("Register")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF1976D2)
+                    )
+                ) {
+                    Text("Register")
+                }
 
-            Text(
-                text = "Already have an account?",
-                color = Color.White,
-                style = MaterialTheme.typography.bodySmall
-            )
-            TextButton(
-                onClick = { navController.navigate("login") },
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text("Go to Login", color = Color.White)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Already have an account?", color = Color.White)
+                TextButton(onClick = { navController.navigate("login") }) {
+                    Text("Go to Login", color = Color.White)
+                }
             }
         }
     }
@@ -186,10 +178,14 @@ fun registerWithEmailAndPassword(
     password: String,
     role: String,
     navController: NavController, // Dodano za navigaciju
+    onStart: () -> Unit = {},
+    onFinish: () -> Unit = {},
     onRegisterSuccess: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
+
+    onStart()
 
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
@@ -206,13 +202,16 @@ fun registerWithEmailAndPassword(
                     .document(userId)
                     .set(user)
                     .addOnSuccessListener {
+                        onFinish()
                         onRegisterSuccess()
                         navigateToHomeFromRegister(navController, role)
                     }
                     .addOnFailureListener { e ->
+                        onFinish()
                         Toast.makeText(context, "Failed to save user: ${e.message}", Toast.LENGTH_LONG).show()
                     }
             } else {
+                onFinish()
                 Toast.makeText(context, "Registration Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
             }
         }
