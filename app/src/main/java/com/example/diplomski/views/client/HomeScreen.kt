@@ -238,7 +238,8 @@ fun QuizCard(quiz: Quiz) {
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = { focusManager.clearFocus()}
-                    )
+                    ),
+                    enabled = registrationStatus.value == "not_registered"
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -259,7 +260,8 @@ fun QuizCard(quiz: Quiz) {
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = {  focusManager.clearFocus()  }
-                    )
+                    ),
+                    enabled = registrationStatus.value == "not_registered"
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -285,7 +287,8 @@ fun QuizCard(quiz: Quiz) {
                         keyboardActions = KeyboardActions(
                             onDone = { focusManager.clearFocus()  }
                         ),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = registrationStatus.value == "not_registered"
                     )
                 }
 
