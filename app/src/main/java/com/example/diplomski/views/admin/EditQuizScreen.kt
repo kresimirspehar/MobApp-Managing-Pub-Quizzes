@@ -44,9 +44,9 @@ fun EditQuizScreen(navController: NavController, quizId: String) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val quizTypes = listOf(
-        "Općeniti kviz", "Sportski kviz", "Glazbeni kviz", "Filmski kviz",
-        "Tehnološki kviz", "Povijesni kviz", "Geografski kviz", "Literarni kviz",
-        "Kviz o pop kulturi", "Tematski kviz", "Ostalo"
+        "General pub quiz", "Sports quiz", "Music quiz", "Movie quiz",
+        "Technology quiz", "History quiz", "Geography quiz", "Literature quiz",
+        "Pop culture quiz", "Themed quiz", "Other type of quiz"
     )
 
     // Stanja za podatke o kvizu

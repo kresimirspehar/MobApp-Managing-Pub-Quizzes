@@ -258,9 +258,9 @@ fun ExpandableCard(
 @Composable
 fun AddQuizScreen(navController: NavController) {
     val quizTypes = listOf(
-        "Općeniti kviz", "Sportski kviz", "Glazbeni kviz", "Filmski kviz",
-        "Tehnološki kviz", "Povijesni kviz", "Geografski kviz", "Literarni kviz",
-        "Kviz o pop kulturi", "Tematski kviz", "Ostalo"
+        "General pub quiz", "Sports quiz", "Music quiz", "Movie quiz",
+        "Technology quiz", "History quiz", "Geography quiz", "Literature quiz",
+        "Pop culture quiz", "Themed quiz", "Other type of quiz"
     )
     var selectedQuizType by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
